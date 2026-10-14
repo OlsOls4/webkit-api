@@ -6,21 +6,12 @@ on:
 permissions:
   contents: read
   id-token: write
+concurrency:
+  group: deploy
+  cancel-in-progress: true
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - service: webkit-api
-            dir: .
-          - service: domainkit-api
-            dir: domainkit
-          - service: qrkit-api
-            dir: qrkit
-          - service: textkit-api
-            dir: textkit
     steps:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v2
@@ -28,20 +19,18 @@ jobs:
           workload_identity_provider: projects/1003933593053/locations/global/workloadIdentityPools/github/providers/github
           service_account: github-deployer@webkit-api.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
-      - name: Deploy ${{ matrix.service }}
+      - name: Deploy
         env:
           PROXY_SECRET: ${{ secrets.RAPIDAPI_PROXY_SECRET }}
         run: |
           ENVFLAG=""
           if [ -n "$PROXY_SECRET" ]; then ENVFLAG="--set-env-vars=RAPIDAPI_PROXY_SECRET=$PROXY_SECRET"; fi
-          gcloud run deploy ${{ matrix.service }} --source ${{ matrix.dir }} --project webkit-api --region us-central1 \
+          gcloud run deploy webkit-api --source . --project webkit-api --region us-central1 \
             --allow-unauthenticated --memory 512Mi --cpu 1 --max-instances 1 --quiet $ENVFLAG > out.txt 2>&1 || {
-            BID=$(grep -o 'builds/[0-9a-f-]\{36\}' out.txt | head -1 | cut -d/ -f2)
-            [ -z "$BID" ] && BID=$(gcloud builds list --project webkit-api --region us-central1 --limit=1 --format='value(id)')
-            gcloud builds log "$BID" --project webkit-api --region us-central1 > blog.txt 2>&1 || true
-            echo "::error::$(grep -iE 'error|fail|not found|no such' blog.txt | tail -c 3000 | tr '\n' ' ')"; exit 1; }
+            echo "::error::$(tail -c 1500 out.txt | tr '\n' ' ')"; exit 1; }
       - name: Smoke test
         run: |
-          URL=$(gcloud run services describe ${{ matrix.service }} --project webkit-api --region us-central1 --format='value(status.url)')
-          echo "URL: $URL"
+          URL=$(gcloud run services describe webkit-api --project webkit-api --region us-central1 --format='value(status.url)')
           curl -fsS "$URL/health"
+          curl -fsS -o /dev/null "$URL/qrkit/qr?text=hi"
+          curl -fsS -o /dev/null "$URL/text/stats?text=hello%20world"
