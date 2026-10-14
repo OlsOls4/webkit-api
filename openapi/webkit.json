@@ -1,111 +1,162 @@
 {
- "openapi": "3.0.0",
- "info": {
-  "title": "WebKit - Email Validator, Link Preview & Article Extractor",
-  "version": "1.0.0"
- },
- "servers": [
-  {
-   "url": "https://webkit-api-1003933593053.us-central1.run.app"
-  }
- ],
- "paths": {
-  "/email/validate": {
-   "get": {
-    "summary": "Validate email",
-    "parameters": [
-     {
-      "name": "email",
-      "in": "query",
-      "required": true,
-      "description": "Email address to check",
-      "schema": {
-       "type": "string"
-      },
-      "example": "test@gmail.com"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
+  "openapi": "3.0.0",
+  "info": {
+    "title": "WebKit - Email Validator, Link Preview & Article Extractor",
+    "version": "1.0.0"
   },
-  "/url/preview": {
-   "get": {
-    "summary": "Link preview",
-    "parameters": [
-     {
-      "name": "url",
-      "in": "query",
-      "required": true,
-      "description": "Page URL",
-      "schema": {
-       "type": "string"
-      },
-      "example": "https://www.bbc.co.uk/news"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app"
     }
-   }
-  },
-  "/url/extract": {
-   "get": {
-    "summary": "Extract article",
-    "parameters": [
-     {
-      "name": "url",
-      "in": "query",
-      "required": true,
-      "description": "Article URL",
-      "schema": {
-       "type": "string"
-      },
-      "example": "https://en.wikipedia.org/wiki/Bristol"
-     },
-     {
-      "name": "max_chars",
-      "in": "query",
-      "required": false,
-      "description": "500-100000, default 20000",
-      "schema": {
-       "type": "integer"
-      },
-      "example": 20000
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
+  ],
+  "paths": {
+    "/email/validate": {
+      "get": {
+        "summary": "Validate email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "description": "Email address to check",
+            "schema": {
+              "type": "string"
+            },
+            "example": "test@gmail.com"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
+    },
+    "/url/preview": {
+      "get": {
+        "summary": "Link preview",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Page URL",
+            "schema": {
+              "type": "string"
+            },
+            "example": "https://www.bbc.co.uk/news"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/url/extract": {
+      "get": {
+        "summary": "Extract article",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Article URL",
+            "schema": {
+              "type": "string"
+            },
+            "example": "https://en.wikipedia.org/wiki/Bristol"
+          },
+          {
+            "name": "max_chars",
+            "in": "query",
+            "required": false,
+            "description": "500-100000, default 20000",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 20000
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (WebKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing WebKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
     }
-   }
   }
- }
 }
