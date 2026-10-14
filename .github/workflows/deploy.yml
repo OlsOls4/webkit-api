@@ -19,6 +19,15 @@ jobs:
           workload_identity_provider: projects/1003933593053/locations/global/workloadIdentityPools/github/providers/github
           service_account: github-deployer@webkit-api.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
+      - name: Fetch DB-IP Lite databases (CC BY 4.0)
+        run: |
+          for f in country asn; do
+            for m in $(date -u +%Y-%m) $(date -u -d "$(date -u +%Y-%m-01) -1 day" +%Y-%m); do
+              curl -sfL "https://download.db-ip.com/free/dbip-$f-lite-$m.mmdb.gz" -o /tmp/$f.gz && break
+            done
+            gunzip -c /tmp/$f.gz > geoip/$f.mmdb
+          done
+          ls -la geoip
       - name: Deploy
         env:
           PROXY_SECRET: ${{ secrets.RAPIDAPI_PROXY_SECRET }}
@@ -34,3 +43,4 @@ jobs:
           curl -fsS "$URL/health"
           curl -fsS -o /dev/null "$URL/qrkit/qr?text=hi"
           curl -fsS -o /dev/null "$URL/text/stats?text=hello%20world"
+          curl -fsS "$URL/geo/lookup?ip=8.8.8.8"
