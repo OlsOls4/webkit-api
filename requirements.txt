@@ -8,3 +8,9 @@ pillow==11.0.0
 langdetect==1.0.9
 vaderSentiment==3.3.2
 requests==2.32.3
+phonenumbers==9.0.41
+python-stdnum==2.2
+maxminddb==2.8.2
+pypdf==6.1.1
+fpdf2==2.8.4
+markdown==3.9
