@@ -2,25 +2,50 @@
   "openapi": "3.0.0",
   "info": {
     "title": "PhoneKit - Phone Number Validation, Carrier & Line Type",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "description": "# PhoneKit: Phone Number Validation, Carrier and Line Type\n\nValidate, normalise and enrich phone numbers for 240+ countries and territories: E.164 formatting, line type (mobile, landline, VoIP, toll-free, premium), region, location, original carrier and time zones. Offline and instant, with no per-lookup carrier fees.\n\n**Who it's for:** signup and checkout forms, CRMs, SMS and voice platforms, and fraud teams who need clean, comparable numbers.\n\n## Use cases\n- Normalise every number to E.164 before storing it or sending SMS.\n- Reject landlines or premium-rate numbers where only mobiles will work.\n- Flag VoIP numbers on signup as a fraud signal.\n- Show the right local time before calling a customer.\n- Clean and de-duplicate a contact list with /bulk.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com/validate?number=%2B447911123456' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Validation is based on numbering-plan metadata; it confirms a number is valid and allocated, not that it is currently connected or reachable.\n- `carrier` is the original network for the range; ported numbers keep their original carrier name.\n- `+` must be URL-encoded as `%2B` in query strings.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `413` input too large, `422` missing or invalid parameter. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Numbering-plan, geocoding, carrier and time-zone metadata from Google's libphonenumber (via the phonenumbers library), Apache 2.0 licence.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
   },
   "servers": [
     {
       "url": "https://webkit-api-1003933593053.us-central1.run.app/phone"
     }
   ],
+  "tags": [
+    {
+      "name": "Phone numbers",
+      "description": "Validation, formatting and enrichment of phone numbers."
+    },
+    {
+      "name": "Reference",
+      "description": "Example numbers per country."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
   "paths": {
     "/validate": {
       "get": {
-        "summary": "Validate phone number",
+        "operationId": "validatePhoneNumber",
+        "tags": [
+          "Phone numbers"
+        ],
+        "summary": "Validate and format a phone number",
+        "description": "Parses a number written in any common style (spaces, dashes, brackets, leading 0 or +), checks it against the numbering plan, and returns E.164, international, national and tel: formats, line type (mobile, fixed line, VoIP, toll-free, premium rate and so on), region, location, original carrier and time zones. Unparseable input returns 200 with `valid: false` and an `error` message.",
         "parameters": [
           {
             "name": "number",
             "in": "query",
             "required": true,
-            "description": "Phone number, local or international",
+            "description": "Phone number in international (+44 7911 123456) or national (07911 123456) form. URL-encode `+` as `%2B`; a `+` that arrives as a space is restored. Max 40 characters are read. `phone` is accepted as an alias.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 40
             },
             "example": "+447911123456"
           },
@@ -28,37 +53,95 @@
             "name": "country",
             "in": "query",
             "required": false,
-            "description": "Default ISO country for local numbers",
+            "description": "Default region (ISO 3166-1 alpha-2) used to interpret national-format numbers without a + prefix. Not needed for numbers in + format.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2,
+              "pattern": "^[A-Za-z]{2}$"
             },
             "example": "GB"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Parsed number.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/PhoneNumber"
+                },
+                "example": {
+                  "carrier": "JT",
+                  "country_code": 44,
+                  "e164": "+447911123456",
+                  "input": "07911 123456",
+                  "international": "+44 7911 123456",
+                  "line_type": "mobile",
+                  "location": "Guernsey",
+                  "national": "07911 123456",
+                  "national_number": "7911123456",
+                  "possible": true,
+                  "region": "GG",
+                  "rfc3966": "tel:+44-7911-123456",
+                  "timezones": [
+                    "Europe/Guernsey",
+                    "Europe/Isle_of_Man",
+                    "Europe/Jersey",
+                    "Europe/London"
+                  ],
+                  "valid": true
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/bulk": {
       "post": {
-        "summary": "Bulk validate (up to 100)",
+        "operationId": "validatePhoneNumbersBulk",
+        "tags": [
+          "Phone numbers"
+        ],
+        "summary": "Validate up to 100 phone numbers",
+        "description": "Validates and formats up to 100 numbers in one request. Results are returned in input order with the same fields as /validate. Invalid entries do not fail the batch.",
         "parameters": [],
         "requestBody": {
           "required": true,
+          "description": "Numbers to validate.",
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "properties": {
+                  "numbers": {
+                    "type": "array",
+                    "description": "1-100 phone numbers (strings). Each is read up to 40 characters.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 100
+                  },
+                  "country": {
+                    "type": "string",
+                    "description": "Default ISO 3166-1 alpha-2 region for national-format numbers.",
+                    "pattern": "^[A-Za-z]{2}$"
+                  }
+                },
+                "required": [
+                  "numbers"
+                ],
                 "example": {
                   "numbers": [
                     "+447911123456",
@@ -73,43 +156,169 @@
         },
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Results in input order.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/PhoneBulkResult"
+                },
+                "example": {
+                  "results": [
+                    {
+                      "carrier": "JT",
+                      "country_code": 44,
+                      "e164": "+447911123456",
+                      "input": "+447911123456",
+                      "international": "+44 7911 123456",
+                      "line_type": "mobile",
+                      "location": "Guernsey",
+                      "national": "07911 123456",
+                      "national_number": "7911123456",
+                      "possible": true,
+                      "region": "GG",
+                      "rfc3966": "tel:+44-7911-123456",
+                      "timezones": [
+                        "Europe/Guernsey",
+                        "Europe/Isle_of_Man",
+                        "Europe/Jersey",
+                        "Europe/London"
+                      ],
+                      "valid": true
+                    },
+                    {
+                      "carrier": null,
+                      "country_code": 1,
+                      "e164": "+14155552671",
+                      "input": "+14155552671",
+                      "international": "+1 415-555-2671",
+                      "line_type": "fixed_line_or_mobile",
+                      "location": "San Francisco, CA",
+                      "national": "(415) 555-2671",
+                      "national_number": "4155552671",
+                      "possible": true,
+                      "region": "US",
+                      "rfc3966": "tel:+1-415-555-2671",
+                      "timezones": [
+                        "America/Los_Angeles"
+                      ],
+                      "valid": true
+                    },
+                    {
+                      "error": "The string supplied did not seem to be a phone number.",
+                      "input": "not-a-number",
+                      "possible": false,
+                      "valid": false
+                    }
+                  ]
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "More than 100 numbers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "max 100 numbers per request"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`numbers` missing, empty or not an array.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "POST JSON {\"numbers\": [...], \"country\": \"GB\"}"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/example": {
       "get": {
-        "summary": "Example number for a country",
+        "operationId": "getExamplePhoneNumber",
+        "tags": [
+          "Reference"
+        ],
+        "summary": "Get an example number for a country",
+        "description": "Returns a valid example fixed-line number for the country, fully parsed. Handy for input placeholders and test fixtures.",
         "parameters": [
           {
             "name": "country",
             "in": "query",
             "required": true,
-            "description": "ISO 3166 alpha-2",
+            "description": "ISO 3166-1 alpha-2 country code, e.g. GB, US, DE.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2,
+              "pattern": "^[A-Za-z]{2}$"
             },
             "example": "US"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Example number.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/PhoneNumber"
+                },
+                "example": {
+                  "carrier": null,
+                  "country_code": 1,
+                  "e164": "+12015550123",
+                  "input": "+12015550123",
+                  "international": "+1 201-555-0123",
+                  "line_type": "fixed_line_or_mobile",
+                  "location": "New Jersey",
+                  "national": "(201) 555-0123",
+                  "national_number": "2015550123",
+                  "possible": true,
+                  "region": "US",
+                  "rfc3966": "tel:+1-201-555-0123",
+                  "timezones": [
+                    "America/New_York"
+                  ],
+                  "valid": true
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Unknown country code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "country must be an ISO 3166 alpha-2 code like GB"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -121,7 +330,7 @@
         "tags": [
           "MCP"
         ],
-        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing PhoneKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "description": "Model Context Protocol (MCP) server for PhoneKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"phonekit\": {\n      \"url\": \"https://phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"phonekit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: phonekit-phone-number-validation-carrier-line-type.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
         "requestBody": {
           "required": true,
           "content": {
@@ -161,6 +370,168 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "PhoneNumber": {
+        "type": "object",
+        "description": "Parsed phone number. When the input cannot be parsed at all, only `input`, `valid` (false), `possible` (false) and `error` are returned.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Number as received (max 40 characters)."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Number is valid for its region according to current numbering-plan metadata (right length, allocated prefix)."
+          },
+          "possible": {
+            "type": "boolean",
+            "description": "Number has a plausible length for the region (a weaker check than `valid`)."
+          },
+          "error": {
+            "type": "string",
+            "description": "Why parsing failed (only when the input is not a phone number)."
+          },
+          "e164": {
+            "type": "string",
+            "description": "E.164 format, e.g. +447911123456. Store this.",
+            "example": "+447911123456"
+          },
+          "international": {
+            "type": "string",
+            "description": "International display format, e.g. +44 7911 123456."
+          },
+          "national": {
+            "type": "string",
+            "description": "National display format, e.g. 07911 123456."
+          },
+          "rfc3966": {
+            "type": "string",
+            "description": "tel: URI, e.g. tel:+44-7911-123456."
+          },
+          "country_code": {
+            "type": "integer",
+            "description": "Country calling code, e.g. 44."
+          },
+          "national_number": {
+            "type": "string",
+            "description": "National significant number without the country code."
+          },
+          "region": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 region the number belongs to (may be a territory sharing the code, e.g. GG, JE, IM for +44).",
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "description": "Geographic description (city, area or country) where known.",
+            "nullable": true
+          },
+          "carrier": {
+            "type": "string",
+            "description": "Original mobile carrier for the number range, where known. Does not reflect number porting.",
+            "nullable": true
+          },
+          "line_type": {
+            "type": "string",
+            "description": "Line type from numbering-plan metadata.",
+            "enum": [
+              "fixed_line",
+              "mobile",
+              "fixed_line_or_mobile",
+              "toll_free",
+              "premium_rate",
+              "shared_cost",
+              "voip",
+              "personal_number",
+              "pager",
+              "uan",
+              "voicemail",
+              "unknown"
+            ]
+          },
+          "timezones": {
+            "type": "array",
+            "description": "IANA time zones the number may be in.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PhoneBulkResult": {
+        "type": "object",
+        "description": "Bulk results.",
+        "properties": {
+          "results": {
+            "type": "array",
+            "description": "One entry per input number, in order.",
+            "items": {
+              "$ref": "#/components/schemas/PhoneNumber"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Unprocessable: a required parameter is missing or a value is invalid. The `error` text says which.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "A required parameter is missing or invalid"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
           }
         }
       }
