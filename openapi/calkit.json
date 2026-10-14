@@ -2,25 +2,59 @@
   "openapi": "3.0.0",
   "info": {
     "title": "CalKit - Public Holidays, Business Days & Timezone API (150+ countries)",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "description": "# CalKit: Public Holidays, Business Days and Time Zone API\n\nPublic holidays for 250+ country and territory codes with regional subdivisions, business-day maths that skips weekends and holidays, and time-zone lookup and conversion. Built for deadlines, delivery dates and scheduling across borders.\n\n**Who it's for:** e-commerce and logistics, payroll and HR, fintech, booking and scheduling apps, and SaaS products with SLAs.\n\n## Use cases\n- Show accurate 'arrives by' dates that skip bank holidays.\n- Calculate invoice due dates and SLA deadlines in business days.\n- Block bookings or payouts on public holidays in a customer's region.\n- Find a user's time zone from GPS coordinates.\n- Convert meeting times between offices, with daylight saving handled.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://calkit-public-holidays-business-days-timezones.p.rapidapi.com/holidays?country=GB&subdiv=ENG&year=2026' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: calkit-public-holidays-business-days-timezones.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`calkit-public-holidays-business-days-timezones.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Dates are ISO 8601 (`YYYY-MM-DD`). Supported years: 1950-2100 for holiday lists.\n- Use `weekend` for countries with non Saturday/Sunday weekends (e.g. `fri,sat`).\n- Holiday definitions follow official sources as encoded in the open-source holidays library; occasional one-off holidays may be added late.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `404` not found, `422` missing or invalid parameter. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Holiday data: python-holidays library (MIT licence).\n- Time zone boundaries: tzfpy, built on timezone-boundary-builder data derived from OpenStreetMap (ODbL 1.0).\n- Time zone rules: IANA Time Zone Database (public domain).\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
   },
   "servers": [
     {
       "url": "https://webkit-api-1003933593053.us-central1.run.app/cal"
     }
   ],
+  "tags": [
+    {
+      "name": "Holidays",
+      "description": "Public holidays by country, subdivision and year."
+    },
+    {
+      "name": "Business days",
+      "description": "Business-day arithmetic that skips weekends and holidays."
+    },
+    {
+      "name": "Time zones",
+      "description": "Coordinate to time zone lookup and conversion."
+    },
+    {
+      "name": "Reference",
+      "description": "Supported countries and subdivisions."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
   "paths": {
     "/holidays": {
       "get": {
-        "summary": "Public holidays",
+        "operationId": "listHolidays",
+        "tags": [
+          "Holidays"
+        ],
+        "summary": "List public holidays for a country and year",
+        "description": "Returns every public holiday for a country (and optional subdivision) in a year, sorted by date, with weekday names. Substitute 'observed' days are included where the country has them.",
         "parameters": [
           {
             "name": "country",
             "in": "query",
             "required": true,
-            "description": "ISO country code",
+            "description": "ISO 3166-1 alpha-2 country code (alpha-3 also accepted), case-insensitive. See /countries.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 3
             },
             "example": "GB"
           },
@@ -28,9 +62,11 @@
             "name": "year",
             "in": "query",
             "required": false,
-            "description": "Year",
+            "description": "Calendar year (1950-2100). Defaults to the current year.",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1950,
+              "maximum": 2100
             },
             "example": 2026
           },
@@ -38,37 +74,116 @@
             "name": "subdiv",
             "in": "query",
             "required": false,
-            "description": "Subdivision e.g. ENG, SCT, CA, NY",
+            "description": "Optional subdivision code for regional holidays, e.g. ENG, SCT, WLS, NIR for GB; CA, NY for US; BY for DE. Must belong to `country`. See /countries.",
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "ENG"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Holidays.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/HolidayList"
+                },
+                "example": {
+                  "count": 9,
+                  "country": "GB",
+                  "holidays": [
+                    {
+                      "date": "2026-01-01",
+                      "name": "New Year's Day",
+                      "weekday": "Thursday"
+                    },
+                    {
+                      "date": "2026-04-03",
+                      "name": "Good Friday",
+                      "weekday": "Friday"
+                    },
+                    {
+                      "date": "2026-04-06",
+                      "name": "Easter Monday",
+                      "weekday": "Monday"
+                    },
+                    {
+                      "date": "2026-05-04",
+                      "name": "May Day",
+                      "weekday": "Monday"
+                    },
+                    {
+                      "date": "2026-05-25",
+                      "name": "Spring Bank Holiday",
+                      "weekday": "Monday"
+                    },
+                    {
+                      "date": "2026-08-31",
+                      "name": "Late Summer Bank Holiday",
+                      "weekday": "Monday"
+                    },
+                    {
+                      "date": "2026-12-25",
+                      "name": "Christmas Day",
+                      "weekday": "Friday"
+                    },
+                    {
+                      "date": "2026-12-26",
+                      "name": "Boxing Day",
+                      "weekday": "Saturday"
+                    },
+                    {
+                      "date": "2026-12-28",
+                      "name": "Boxing Day (observed)",
+                      "weekday": "Monday"
+                    }
+                  ],
+                  "subdiv": "ENG",
+                  "year": 2026
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Missing or invalid date, country, subdivision or weekend.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Unsupported country. See /countries"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/is-holiday": {
       "get": {
-        "summary": "Is it a holiday / business day?",
+        "operationId": "checkHoliday",
+        "tags": [
+          "Holidays"
+        ],
+        "summary": "Check if a date is a holiday or business day",
+        "description": "Tells you whether a date is a public holiday (and which), a weekend day, and a business day, for a country and optional subdivision.",
         "parameters": [
           {
             "name": "date",
             "in": "query",
             "required": true,
-            "description": "YYYY-MM-DD",
+            "description": "Date to check, YYYY-MM-DD.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date"
             },
             "example": "2026-12-25"
           },
@@ -76,9 +191,11 @@
             "name": "country",
             "in": "query",
             "required": true,
-            "description": "ISO country code",
+            "description": "ISO 3166-1 alpha-2 country code (alpha-3 also accepted), case-insensitive. See /countries.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 3
             },
             "example": "GB"
           },
@@ -86,47 +203,84 @@
             "name": "subdiv",
             "in": "query",
             "required": false,
-            "description": "Subdivision",
+            "description": "Optional subdivision code for regional holidays, e.g. ENG, SCT, WLS, NIR for GB; CA, NY for US; BY for DE. Must belong to `country`. See /countries.",
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "ENG"
           },
           {
             "name": "weekend",
             "in": "query",
             "required": false,
-            "description": "Weekend days",
+            "description": "Comma-separated weekend days (first three letters are used), e.g. `sat,sun` or `fri,sat`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[A-Za-z]{3,}(,[A-Za-z]{3,})*$",
+              "default": "sat,sun"
             },
             "example": "sat,sun"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Date check.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/HolidayCheck"
+                },
+                "example": {
+                  "date": "2026-12-25",
+                  "holiday_name": "Christmas Day",
+                  "is_business_day": false,
+                  "is_holiday": true,
+                  "is_weekend": false,
+                  "weekday": "Friday"
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Missing or invalid date, country, subdivision or weekend.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Unsupported country. See /countries"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/next-holiday": {
       "get": {
-        "summary": "Next holidays",
+        "operationId": "getNextHolidays",
+        "tags": [
+          "Holidays"
+        ],
+        "summary": "Get the next upcoming public holidays",
+        "description": "Returns the next public holidays on or after a date (default today), with days away. Looks ahead through the end of the following year.",
         "parameters": [
           {
             "name": "country",
             "in": "query",
             "required": true,
-            "description": "ISO country code",
+            "description": "ISO 3166-1 alpha-2 country code (alpha-3 also accepted), case-insensitive. See /countries.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 3
             },
             "example": "US"
           },
@@ -134,47 +288,107 @@
             "name": "date",
             "in": "query",
             "required": false,
-            "description": "From date (default today)",
+            "description": "Start date, YYYY-MM-DD. Defaults to today (UTC).",
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2026-10-14"
           },
           {
             "name": "count",
             "in": "query",
             "required": false,
-            "description": "How many",
+            "description": "How many holidays to return (clamped to 1-20).",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 1
             },
             "example": 3
+          },
+          {
+            "name": "subdiv",
+            "in": "query",
+            "required": false,
+            "description": "Optional subdivision code for regional holidays, e.g. ENG, SCT, WLS, NIR for GB; CA, NY for US; BY for DE. Must belong to `country`. See /countries.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "CA"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Upcoming holidays.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/NextHolidays"
+                },
+                "example": {
+                  "from_date": "2026-10-14",
+                  "holidays": [
+                    {
+                      "date": "2026-11-11",
+                      "days_away": 28,
+                      "name": "Veterans Day"
+                    },
+                    {
+                      "date": "2026-11-26",
+                      "days_away": 43,
+                      "name": "Thanksgiving Day"
+                    },
+                    {
+                      "date": "2026-12-25",
+                      "days_away": 72,
+                      "name": "Christmas Day"
+                    }
+                  ]
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Missing or invalid date, country, subdivision or weekend.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Unsupported country. See /countries"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/business-days/add": {
       "get": {
-        "summary": "Add business days",
+        "operationId": "addBusinessDays",
+        "tags": [
+          "Business days"
+        ],
+        "summary": "Add or subtract business days from a date",
+        "description": "Moves forward (or back, with negative `days`) by N business days, skipping weekends and the country's public holidays. Returns the resulting date and the holidays skipped. Perfect for delivery estimates, SLA deadlines and payment terms.",
         "parameters": [
           {
             "name": "date",
             "in": "query",
             "required": true,
-            "description": "Start YYYY-MM-DD",
+            "description": "Start date, YYYY-MM-DD (not counted).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date"
             },
             "example": "2026-12-23"
           },
@@ -182,9 +396,11 @@
             "name": "days",
             "in": "query",
             "required": true,
-            "description": "Business days (negative to subtract)",
+            "description": "Business days to add; negative to subtract (clamped to -3650..3650).",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": -3650,
+              "maximum": 3650
             },
             "example": 5
           },
@@ -192,9 +408,11 @@
             "name": "country",
             "in": "query",
             "required": true,
-            "description": "ISO country code",
+            "description": "ISO 3166-1 alpha-2 country code (alpha-3 also accepted), case-insensitive. See /countries.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 3
             },
             "example": "GB"
           },
@@ -202,48 +420,99 @@
             "name": "subdiv",
             "in": "query",
             "required": false,
-            "description": "Subdivision",
+            "description": "Optional subdivision code for regional holidays, e.g. ENG, SCT, WLS, NIR for GB; CA, NY for US; BY for DE. Must belong to `country`. See /countries.",
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "ENG"
           },
           {
             "name": "weekend",
             "in": "query",
             "required": false,
-            "description": "Weekend days",
+            "description": "Comma-separated weekend days (first three letters are used), e.g. `sat,sun` or `fri,sat`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[A-Za-z]{3,}(,[A-Za-z]{3,})*$",
+              "default": "sat,sun"
             },
             "example": "sat,sun"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Resulting date.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/BusinessDaysAdd"
+                },
+                "example": {
+                  "business_days": 5,
+                  "holidays_skipped": [
+                    {
+                      "date": "2026-12-25",
+                      "name": "Christmas Day"
+                    },
+                    {
+                      "date": "2026-12-26",
+                      "name": "Boxing Day"
+                    },
+                    {
+                      "date": "2026-12-28",
+                      "name": "Boxing Day (observed)"
+                    },
+                    {
+                      "date": "2027-01-01",
+                      "name": "New Year's Day"
+                    }
+                  ],
+                  "result": "2027-01-04",
+                  "start": "2026-12-23",
+                  "weekday": "Monday"
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Missing or invalid date, country, subdivision or weekend.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Unsupported country. See /countries"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
-        },
-        "description": "Delivery dates, SLAs, payment terms."
+        }
       }
     },
     "/business-days/between": {
       "get": {
-        "summary": "Business days between dates",
+        "operationId": "countBusinessDays",
+        "tags": [
+          "Business days"
+        ],
+        "summary": "Count business days between two dates",
+        "description": "Counts calendar days, business days and weekend days between two dates (both inclusive; order does not matter), and lists the public holidays that fell on working days. Range up to 100 years.",
         "parameters": [
           {
             "name": "start",
             "in": "query",
             "required": true,
-            "description": "YYYY-MM-DD",
+            "description": "First date, YYYY-MM-DD (inclusive).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date"
             },
             "example": "2026-12-01"
           },
@@ -251,9 +520,10 @@
             "name": "end",
             "in": "query",
             "required": true,
-            "description": "YYYY-MM-DD",
+            "description": "Last date, YYYY-MM-DD (inclusive).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date"
             },
             "example": "2026-12-31"
           },
@@ -261,9 +531,11 @@
             "name": "country",
             "in": "query",
             "required": true,
-            "description": "ISO country code",
+            "description": "ISO 3166-1 alpha-2 country code (alpha-3 also accepted), case-insensitive. See /countries.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 3
             },
             "example": "GB"
           },
@@ -271,37 +543,95 @@
             "name": "subdiv",
             "in": "query",
             "required": false,
-            "description": "Subdivision",
+            "description": "Optional subdivision code for regional holidays, e.g. ENG, SCT, WLS, NIR for GB; CA, NY for US; BY for DE. Must belong to `country`. See /countries.",
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "ENG"
+          },
+          {
+            "name": "weekend",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated weekend days (first three letters are used), e.g. `sat,sun` or `fri,sat`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z]{3,}(,[A-Za-z]{3,})*$",
+              "default": "sat,sun"
+            },
+            "example": "sat,sun"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Counts.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/BusinessDaysBetween"
+                },
+                "example": {
+                  "business_days": 21,
+                  "calendar_days": 31,
+                  "end": "2026-12-31",
+                  "holidays": [
+                    {
+                      "date": "2026-12-25",
+                      "name": "Christmas Day"
+                    },
+                    {
+                      "date": "2026-12-28",
+                      "name": "Boxing Day (observed)"
+                    }
+                  ],
+                  "note": "Both start and end dates are included",
+                  "start": "2026-12-01",
+                  "weekend_days": 8
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Missing or invalid date, country, subdivision or weekend.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Unsupported country. See /countries"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/timezone": {
       "get": {
-        "summary": "Timezone from coordinates",
+        "operationId": "getTimezoneByCoordinates",
+        "tags": [
+          "Time zones"
+        ],
+        "summary": "Find the time zone for coordinates",
+        "description": "Returns the IANA time zone for a latitude/longitude, with the current local time, UTC offset, abbreviation and DST flag. Ocean points return Etc/GMT zones.",
         "parameters": [
           {
             "name": "lat",
             "in": "query",
             "required": true,
-            "description": "Latitude",
+            "description": "Latitude in decimal degrees (-90 to 90).",
             "schema": {
-              "type": "number"
+              "type": "number",
+              "format": "double",
+              "minimum": -90,
+              "maximum": 90
             },
             "example": 51.4545
           },
@@ -309,38 +639,88 @@
             "name": "lng",
             "in": "query",
             "required": true,
-            "description": "Longitude",
+            "description": "Longitude in decimal degrees (-180 to 180).",
             "schema": {
-              "type": "number"
+              "type": "number",
+              "format": "double",
+              "minimum": -180,
+              "maximum": 180
             },
             "example": -2.5879
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Time zone.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/TimezoneResult"
+                },
+                "example": {
+                  "abbreviation": "BST",
+                  "is_dst": true,
+                  "lat": 51.4545,
+                  "lng": -2.5879,
+                  "local_time": "2026-10-14T23:43:52+01:00",
+                  "timezone": "Europe/London",
+                  "utc_offset": "+0100"
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "No time zone found for the point.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "No timezone found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "lat/lng missing or out of range.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "lat and lng are required numbers"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/convert": {
       "get": {
-        "summary": "Convert time between zones",
+        "operationId": "convertTime",
+        "tags": [
+          "Time zones"
+        ],
+        "summary": "Convert a time between time zones",
+        "description": "Converts a date-time from one IANA time zone to another, handling daylight-saving rules for that date. Returns both ISO 8601 timestamps, offsets and the target abbreviation.",
         "parameters": [
           {
             "name": "time",
             "in": "query",
             "required": false,
-            "description": "ISO time",
+            "description": "ISO 8601 date-time, e.g. 2026-10-14T09:30. Without an offset it is read as local time in `from`; with an offset, the offset wins. If omitted the server's current clock time (UTC) is used as the wall time in `from`, so pass an explicit time for exact results.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "date-time"
             },
             "example": "2026-10-14T09:30"
           },
@@ -348,7 +728,7 @@
             "name": "from",
             "in": "query",
             "required": true,
-            "description": "IANA zone",
+            "description": "Source IANA time zone, e.g. Europe/London.",
             "schema": {
               "type": "string"
             },
@@ -358,7 +738,7 @@
             "name": "to",
             "in": "query",
             "required": true,
-            "description": "IANA zone",
+            "description": "Target IANA time zone, e.g. America/New_York.",
             "schema": {
               "type": "string"
             },
@@ -367,32 +747,176 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Converted time.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/TimeConversion"
+                },
+                "example": {
+                  "from_offset": "+0100",
+                  "from_zone": "Europe/London",
+                  "input": "2026-10-14T09:30:00+01:00",
+                  "output": "2026-10-14T04:30:00-04:00",
+                  "to_abbreviation": "EDT",
+                  "to_offset": "-0400",
+                  "to_zone": "America/New_York"
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Unknown time zone or bad time.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "from and to must be IANA timezones like Europe/London, America/New_York"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/countries": {
       "get": {
-        "summary": "Supported countries & subdivisions",
+        "operationId": "listSupportedCountries",
+        "tags": [
+          "Reference"
+        ],
+        "summary": "List supported countries and subdivisions",
+        "description": "Lists every supported country code (alpha-2 and alpha-3 aliases) with its subdivision codes, for building country pickers and validating input.",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Supported countries (example trimmed).",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/CountryList"
+                },
+                "example": {
+                  "count": 501,
+                  "countries": {
+                    "AD": [
+                      "02",
+                      "03",
+                      "04",
+                      "05",
+                      "06",
+                      "07",
+                      "08"
+                    ],
+                    "AE": [],
+                    "DE": [
+                      "Augsburg",
+                      "BB",
+                      "BE",
+                      "BW",
+                      "BY",
+                      "HB",
+                      "HE",
+                      "HH",
+                      "MV",
+                      "NI",
+                      "NW",
+                      "RP",
+                      "SH",
+                      "SL",
+                      "SN",
+                      "ST",
+                      "TH"
+                    ],
+                    "GB": [
+                      "ENG",
+                      "NIR",
+                      "SCT",
+                      "WLS"
+                    ],
+                    "GBR": [
+                      "ENG",
+                      "NIR",
+                      "SCT",
+                      "WLS"
+                    ],
+                    "US": [
+                      "AK",
+                      "AL",
+                      "AR",
+                      "AS",
+                      "AZ",
+                      "CA",
+                      "CO",
+                      "CT",
+                      "DC",
+                      "DE",
+                      "FL",
+                      "GA",
+                      "GU",
+                      "HI",
+                      "IA",
+                      "ID",
+                      "IL",
+                      "IN",
+                      "KS",
+                      "KY",
+                      "LA",
+                      "MA",
+                      "MD",
+                      "ME",
+                      "MI",
+                      "MN",
+                      "MO",
+                      "MP",
+                      "MS",
+                      "MT",
+                      "NC",
+                      "ND",
+                      "NE",
+                      "NH",
+                      "NJ",
+                      "NM",
+                      "NV",
+                      "NY",
+                      "OH",
+                      "OK",
+                      "OR",
+                      "PA",
+                      "PR",
+                      "RI",
+                      "SC",
+                      "SD",
+                      "TN",
+                      "TX",
+                      "UM",
+                      "UT",
+                      "VA",
+                      "VI",
+                      "VT",
+                      "WA",
+                      "WI",
+                      "WV",
+                      "WY"
+                    ]
+                  }
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -404,7 +928,7 @@
         "tags": [
           "MCP"
         ],
-        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing CalKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "description": "Model Context Protocol (MCP) server for CalKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://calkit-public-holidays-business-days-timezones.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: calkit-public-holidays-business-days-timezones.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"calkit\": {\n      \"url\": \"https://calkit-public-holidays-business-days-timezones.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"calkit-public-holidays-business-days-timezones.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"calkit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://calkit-public-holidays-business-days-timezones.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:calkit-public-holidays-business-days-timezones.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://calkit-public-holidays-business-days-timezones.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: calkit-public-holidays-business-days-timezones.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
         "requestBody": {
           "required": true,
           "content": {
@@ -444,6 +968,343 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "Holiday": {
+        "type": "object",
+        "description": "Holiday.",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Date, YYYY-MM-DD.",
+            "format": "date"
+          },
+          "name": {
+            "type": "string",
+            "description": "Holiday name in English (observed substitutes are labelled, e.g. 'Boxing Day (observed)')."
+          }
+        }
+      },
+      "HolidayList": {
+        "type": "object",
+        "description": "Holidays in a year.",
+        "properties": {
+          "country": {
+            "type": "string",
+            "description": "Country code as requested, upper-cased."
+          },
+          "subdiv": {
+            "type": "string",
+            "description": "Subdivision as requested.",
+            "nullable": true
+          },
+          "year": {
+            "type": "integer",
+            "description": "Year."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of holidays."
+          },
+          "holidays": {
+            "type": "array",
+            "description": "Holidays sorted by date.",
+            "items": {
+              "type": "object",
+              "description": "Holiday with weekday.",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "YYYY-MM-DD.",
+                  "format": "date"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Holiday name."
+                },
+                "weekday": {
+                  "type": "string",
+                  "description": "English weekday name."
+                }
+              }
+            }
+          }
+        }
+      },
+      "HolidayCheck": {
+        "type": "object",
+        "description": "Date check.",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Date checked.",
+            "format": "date"
+          },
+          "weekday": {
+            "type": "string",
+            "description": "Weekday name."
+          },
+          "is_holiday": {
+            "type": "boolean",
+            "description": "Public holiday."
+          },
+          "holiday_name": {
+            "type": "string",
+            "description": "Holiday name if any.",
+            "nullable": true
+          },
+          "is_weekend": {
+            "type": "boolean",
+            "description": "Falls on a weekend day."
+          },
+          "is_business_day": {
+            "type": "boolean",
+            "description": "Neither weekend nor holiday."
+          }
+        }
+      },
+      "NextHolidays": {
+        "type": "object",
+        "description": "Upcoming holidays.",
+        "properties": {
+          "from_date": {
+            "type": "string",
+            "description": "Start date.",
+            "format": "date"
+          },
+          "holidays": {
+            "type": "array",
+            "description": "Next holidays.",
+            "items": {
+              "type": "object",
+              "description": "Upcoming holiday.",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "YYYY-MM-DD.",
+                  "format": "date"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name."
+                },
+                "days_away": {
+                  "type": "integer",
+                  "description": "Days from from_date (0 = that day)."
+                }
+              }
+            }
+          }
+        }
+      },
+      "BusinessDaysAdd": {
+        "type": "object",
+        "description": "Business-day arithmetic.",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "Start date.",
+            "format": "date"
+          },
+          "business_days": {
+            "type": "integer",
+            "description": "Days added (negative = subtracted)."
+          },
+          "result": {
+            "type": "string",
+            "description": "Resulting business date.",
+            "format": "date"
+          },
+          "weekday": {
+            "type": "string",
+            "description": "Weekday of the result."
+          },
+          "holidays_skipped": {
+            "type": "array",
+            "description": "Public holidays passed over while counting (holidays that fall on weekend days are counted as weekend and not listed).",
+            "items": {
+              "$ref": "#/components/schemas/Holiday"
+            }
+          }
+        }
+      },
+      "BusinessDaysBetween": {
+        "type": "object",
+        "description": "Business-day count.",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "Start as given.",
+            "format": "date"
+          },
+          "end": {
+            "type": "string",
+            "description": "End as given.",
+            "format": "date"
+          },
+          "calendar_days": {
+            "type": "integer",
+            "description": "Days in range, inclusive."
+          },
+          "business_days": {
+            "type": "integer",
+            "description": "Working days in range."
+          },
+          "weekend_days": {
+            "type": "integer",
+            "description": "Weekend days in range."
+          },
+          "holidays": {
+            "type": "array",
+            "description": "Holidays on working days within the range.",
+            "items": {
+              "$ref": "#/components/schemas/Holiday"
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "Reminder that both dates are included."
+          }
+        }
+      },
+      "TimezoneResult": {
+        "type": "object",
+        "description": "Time zone for a point.",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "Latitude."
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitude."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone ID."
+          },
+          "local_time": {
+            "type": "string",
+            "description": "Current local time, ISO 8601 with offset.",
+            "format": "date-time"
+          },
+          "utc_offset": {
+            "type": "string",
+            "description": "Current offset, +HHMM."
+          },
+          "abbreviation": {
+            "type": "string",
+            "description": "Current abbreviation, e.g. BST."
+          },
+          "is_dst": {
+            "type": "boolean",
+            "description": "Daylight saving time in effect now."
+          }
+        }
+      },
+      "TimeConversion": {
+        "type": "object",
+        "description": "Converted time.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Input as interpreted, ISO 8601 with offset.",
+            "format": "date-time"
+          },
+          "output": {
+            "type": "string",
+            "description": "Converted time, ISO 8601 with offset.",
+            "format": "date-time"
+          },
+          "from_zone": {
+            "type": "string",
+            "description": "Source zone."
+          },
+          "to_zone": {
+            "type": "string",
+            "description": "Target zone."
+          },
+          "from_offset": {
+            "type": "string",
+            "description": "Source offset, +HHMM."
+          },
+          "to_offset": {
+            "type": "string",
+            "description": "Target offset, +HHMM."
+          },
+          "to_abbreviation": {
+            "type": "string",
+            "description": "Target abbreviation, e.g. EDT."
+          }
+        }
+      },
+      "CountryList": {
+        "type": "object",
+        "description": "Supported countries.",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Number of codes (alpha-2 and alpha-3 aliases both counted)."
+          },
+          "countries": {
+            "type": "object",
+            "description": "Map of country code to its subdivision codes (empty list when none).",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
           }
         }
       }
