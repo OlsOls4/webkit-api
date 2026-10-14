@@ -1,0 +1,168 @@
+{
+ "openapi": "3.0.0",
+ "info": {
+  "title": "DocKit - PDF Text Extraction & Markdown to PDF",
+  "version": "1.0.0"
+ },
+ "servers": [
+  {
+   "url": "https://webkit-api-1003933593053.us-central1.run.app/doc"
+  }
+ ],
+ "paths": {
+  "/pdf/info": {
+   "get": {
+    "summary": "PDF metadata & page count (from URL)",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Public PDF URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/pdf/text": {
+   "get": {
+    "summary": "Extract PDF text (from URL)",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Public PDF URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+     },
+     {
+      "name": "max_pages",
+      "in": "query",
+      "required": false,
+      "description": "1-200",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 50
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/markdown-to-pdf": {
+   "post": {
+    "summary": "Markdown to PDF",
+    "parameters": [
+     {
+      "name": "format",
+      "in": "query",
+      "required": false,
+      "description": "pdf (default) or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "pdf"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "example": {
+         "text": "# Invoice\n\n**Total:** 120.00\n\n- Item one\n- Item two",
+         "title": "Invoice"
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/pdf": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/text-to-pdf": {
+   "post": {
+    "summary": "Plain text to PDF",
+    "parameters": [
+     {
+      "name": "format",
+      "in": "query",
+      "required": false,
+      "description": "pdf or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "pdf"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "example": {
+         "text": "Hello world",
+         "title": "Note"
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/pdf": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}
