@@ -87,3 +87,5 @@ def dispatch(request, path):
         raise ApiError(404, "Not found. Endpoints: /lookup, /validate, /nearest, /autocomplete, /distance, /outcode")
     except ApiError as e:
         return jsonify(error=e.msg), e.code
+    except Exception as e:
+        return jsonify(error=f"Internal error: {type(e).__name__}: {str(e)[:200]}"), 500
