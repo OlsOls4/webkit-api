@@ -1,302 +1,353 @@
 {
- "openapi": "3.0.0",
- "info": {
-  "title": "QRKit - QR Code & Barcode Generator",
-  "version": "1.0.0"
- },
- "servers": [
-  {
-   "url": "https://webkit-api-1003933593053.us-central1.run.app/qrkit"
+  "openapi": "3.0.0",
+  "info": {
+    "title": "QRKit - QR Code & Barcode Generator",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app/qrkit"
+    }
+  ],
+  "paths": {
+    "/qr": {
+      "get": {
+        "summary": "QR code",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Content to encode",
+            "schema": {
+              "type": "string"
+            },
+            "example": "https://example.com"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Pixels 64-2000",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 300
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "png, svg or base64",
+            "schema": {
+              "type": "string"
+            },
+            "example": "png"
+          },
+          {
+            "name": "color",
+            "in": "query",
+            "required": false,
+            "description": "Hex foreground",
+            "schema": {
+              "type": "string"
+            },
+            "example": "000000"
+          },
+          {
+            "name": "bg",
+            "in": "query",
+            "required": false,
+            "description": "Hex background or transparent",
+            "schema": {
+              "type": "string"
+            },
+            "example": "ffffff"
+          },
+          {
+            "name": "ecc",
+            "in": "query",
+            "required": false,
+            "description": "L, M, Q or H",
+            "schema": {
+              "type": "string"
+            },
+            "example": "M"
+          },
+          {
+            "name": "margin",
+            "in": "query",
+            "required": false,
+            "description": "Quiet zone modules 0-20",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/qr/wifi": {
+      "get": {
+        "summary": "Wi-Fi QR code",
+        "parameters": [
+          {
+            "name": "ssid",
+            "in": "query",
+            "required": true,
+            "description": "Network name",
+            "schema": {
+              "type": "string"
+            },
+            "example": "MyWiFi"
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "required": false,
+            "description": "Password",
+            "schema": {
+              "type": "string"
+            },
+            "example": "secret123"
+          },
+          {
+            "name": "security",
+            "in": "query",
+            "required": false,
+            "description": "WPA, WEP or nopass",
+            "schema": {
+              "type": "string"
+            },
+            "example": "WPA"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "png, svg or base64",
+            "schema": {
+              "type": "string"
+            },
+            "example": "png"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/qr/vcard": {
+      "get": {
+        "summary": "Contact (vCard) QR code",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "description": "Full name",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Jane Doe"
+          },
+          {
+            "name": "phone",
+            "in": "query",
+            "required": false,
+            "description": "Phone",
+            "schema": {
+              "type": "string"
+            },
+            "example": "+441234567890"
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "description": "Email",
+            "schema": {
+              "type": "string"
+            },
+            "example": "jane@example.com"
+          },
+          {
+            "name": "org",
+            "in": "query",
+            "required": false,
+            "description": "Company",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "description": "Website",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "png, svg or base64",
+            "schema": {
+              "type": "string"
+            },
+            "example": "png"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/barcode": {
+      "get": {
+        "summary": "Barcode",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Data",
+            "schema": {
+              "type": "string"
+            },
+            "example": "590123412345"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "code128, code39, ean13, ean8, upca, isbn13, issn, itf, pzn",
+            "schema": {
+              "type": "string"
+            },
+            "example": "ean13"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "png, svg or base64",
+            "schema": {
+              "type": "string"
+            },
+            "example": "png"
+          },
+          {
+            "name": "show_text",
+            "in": "query",
+            "required": false,
+            "description": "true/false",
+            "schema": {
+              "type": "string"
+            },
+            "example": "true"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (QRKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing QRKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
   }
- ],
- "paths": {
-  "/qr": {
-   "get": {
-    "summary": "QR code",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Content to encode",
-      "schema": {
-       "type": "string"
-      },
-      "example": "https://example.com"
-     },
-     {
-      "name": "size",
-      "in": "query",
-      "required": false,
-      "description": "Pixels 64-2000",
-      "schema": {
-       "type": "integer"
-      },
-      "example": 300
-     },
-     {
-      "name": "format",
-      "in": "query",
-      "required": false,
-      "description": "png, svg or base64",
-      "schema": {
-       "type": "string"
-      },
-      "example": "png"
-     },
-     {
-      "name": "color",
-      "in": "query",
-      "required": false,
-      "description": "Hex foreground",
-      "schema": {
-       "type": "string"
-      },
-      "example": "000000"
-     },
-     {
-      "name": "bg",
-      "in": "query",
-      "required": false,
-      "description": "Hex background or transparent",
-      "schema": {
-       "type": "string"
-      },
-      "example": "ffffff"
-     },
-     {
-      "name": "ecc",
-      "in": "query",
-      "required": false,
-      "description": "L, M, Q or H",
-      "schema": {
-       "type": "string"
-      },
-      "example": "M"
-     },
-     {
-      "name": "margin",
-      "in": "query",
-      "required": false,
-      "description": "Quiet zone modules 0-20",
-      "schema": {
-       "type": "integer"
-      },
-      "example": 4
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "image/png": {
-        "schema": {
-         "type": "string",
-         "format": "binary"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/qr/wifi": {
-   "get": {
-    "summary": "Wi-Fi QR code",
-    "parameters": [
-     {
-      "name": "ssid",
-      "in": "query",
-      "required": true,
-      "description": "Network name",
-      "schema": {
-       "type": "string"
-      },
-      "example": "MyWiFi"
-     },
-     {
-      "name": "password",
-      "in": "query",
-      "required": false,
-      "description": "Password",
-      "schema": {
-       "type": "string"
-      },
-      "example": "secret123"
-     },
-     {
-      "name": "security",
-      "in": "query",
-      "required": false,
-      "description": "WPA, WEP or nopass",
-      "schema": {
-       "type": "string"
-      },
-      "example": "WPA"
-     },
-     {
-      "name": "format",
-      "in": "query",
-      "required": false,
-      "description": "png, svg or base64",
-      "schema": {
-       "type": "string"
-      },
-      "example": "png"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "image/png": {
-        "schema": {
-         "type": "string",
-         "format": "binary"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/qr/vcard": {
-   "get": {
-    "summary": "Contact (vCard) QR code",
-    "parameters": [
-     {
-      "name": "name",
-      "in": "query",
-      "required": true,
-      "description": "Full name",
-      "schema": {
-       "type": "string"
-      },
-      "example": "Jane Doe"
-     },
-     {
-      "name": "phone",
-      "in": "query",
-      "required": false,
-      "description": "Phone",
-      "schema": {
-       "type": "string"
-      },
-      "example": "+441234567890"
-     },
-     {
-      "name": "email",
-      "in": "query",
-      "required": false,
-      "description": "Email",
-      "schema": {
-       "type": "string"
-      },
-      "example": "jane@example.com"
-     },
-     {
-      "name": "org",
-      "in": "query",
-      "required": false,
-      "description": "Company",
-      "schema": {
-       "type": "string"
-      }
-     },
-     {
-      "name": "url",
-      "in": "query",
-      "required": false,
-      "description": "Website",
-      "schema": {
-       "type": "string"
-      }
-     },
-     {
-      "name": "format",
-      "in": "query",
-      "required": false,
-      "description": "png, svg or base64",
-      "schema": {
-       "type": "string"
-      },
-      "example": "png"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "image/png": {
-        "schema": {
-         "type": "string",
-         "format": "binary"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/barcode": {
-   "get": {
-    "summary": "Barcode",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Data",
-      "schema": {
-       "type": "string"
-      },
-      "example": "590123412345"
-     },
-     {
-      "name": "type",
-      "in": "query",
-      "required": false,
-      "description": "code128, code39, ean13, ean8, upca, isbn13, issn, itf, pzn",
-      "schema": {
-       "type": "string"
-      },
-      "example": "ean13"
-     },
-     {
-      "name": "format",
-      "in": "query",
-      "required": false,
-      "description": "png, svg or base64",
-      "schema": {
-       "type": "string"
-      },
-      "example": "png"
-     },
-     {
-      "name": "show_text",
-      "in": "query",
-      "required": false,
-      "description": "true/false",
-      "schema": {
-       "type": "string"
-      },
-      "example": "true"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "image/png": {
-        "schema": {
-         "type": "string",
-         "format": "binary"
-        }
-       }
-      }
-     }
-    }
-   }
-  }
- }
 }
