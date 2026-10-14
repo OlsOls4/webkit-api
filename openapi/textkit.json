@@ -2,311 +2,794 @@
   "openapi": "3.0.0",
   "info": {
     "title": "TextKit - Sentiment, Language, Readability & Keywords",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "description": "# TextKit: Sentiment, Language, Readability and Keywords\n\nFast, deterministic natural-language utilities: sentiment, language detection, readability grades, keywords, extractive summaries, profanity masking, slugs and text statistics. No LLM involved, so results are instant, cheap and repeatable.\n\n**Who it's for:** product teams analysing reviews and support tickets, content and SEO tools, moderation pipelines, CMSs and edtech.\n\n## Use cases\n- Tag customer reviews and tickets as positive or negative and route the angry ones first.\n- Detect a message's language before translation or routing.\n- Enforce a target reading grade for help-centre or public-sector content.\n- Auto-generate tags, SEO keywords and slugs when publishing articles.\n- Mask profanity in usernames, comments and chat.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://textkit-sentiment-language-readability-keywords.p.rapidapi.com/sentiment?text=I%20love%20this%20product%20but%20shipping%20was%20slow.' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: textkit-sentiment-language-readability-keywords.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`textkit-sentiment-language-readability-keywords.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Input limit is 50,000 characters per request (`413` above that).\n- Sentiment, readability, keywords, profanity and summaries are tuned for English; language detection covers 55 languages.\n- All results are deterministic: the same text always gives the same output.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `413` input too large, `422` missing or invalid parameter. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Sentiment: VADER (Hutto and Gilbert, 2014), MIT licence.\n- Language detection: langdetect, a port of Google's language-detection library, Apache 2.0 licence.\n- Readability formulas: Flesch, Flesch-Kincaid, Gunning Fog, SMOG, Coleman-Liau and ARI (public formulas).\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
   },
   "servers": [
     {
       "url": "https://webkit-api-1003933593053.us-central1.run.app/text"
     }
   ],
+  "tags": [
+    {
+      "name": "Analysis",
+      "description": "Sentiment, language, readability, keywords and statistics."
+    },
+    {
+      "name": "Transform",
+      "description": "Summaries and URL slugs."
+    },
+    {
+      "name": "Moderation",
+      "description": "Profanity detection and masking."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
   "paths": {
     "/analyze": {
       "get": {
-        "summary": "Full analysis (all-in-one)",
+        "operationId": "analyzeText",
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Run every analysis in one call",
+        "description": "Returns statistics, sentiment (without per-sentence detail), top 10 keywords, language and readability in a single response. One request instead of five.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Text (or POST JSON {\"text\":...})",
+            "description": "Text to analyse (UTF-8, max 50,000 characters; longer text returns 413). Long text in a query string is subject to URL length limits of your HTTP client, so keep GET requests to a few KB.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 50000
             },
             "example": "I love this product but shipping was slow."
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Combined analysis.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Analysis"
+                },
+                "example": {
+                  "keywords": [
+                    {
+                      "count": 1,
+                      "keyword": "shipping",
+                      "score": 0.7699
+                    },
+                    {
+                      "count": 1,
+                      "keyword": "product",
+                      "score": 0.7365
+                    },
+                    {
+                      "count": 1,
+                      "keyword": "love",
+                      "score": 0.5966
+                    },
+                    {
+                      "count": 1,
+                      "keyword": "slow",
+                      "score": 0.5966
+                    }
+                  ],
+                  "language": {
+                    "candidates": [
+                      {
+                        "confidence": 1.0,
+                        "language": "en"
+                      }
+                    ],
+                    "confidence": 1.0,
+                    "language": "en"
+                  },
+                  "readability": {
+                    "automated_readability_index": 2.59,
+                    "coleman_liau_index": 5.49,
+                    "complex_words": 0,
+                    "consensus_grade": 3.13,
+                    "flesch_kincaid_grade": 2.28,
+                    "flesch_reading_ease": 92.97,
+                    "gunning_fog": 3.2,
+                    "level": "very easy",
+                    "reading_time_seconds": 2,
+                    "smog_index": 3.13,
+                    "syllables": 10
+                  },
+                  "sentiment": {
+                    "compound": 0.3818,
+                    "label": "positive",
+                    "negative": 0.0,
+                    "neutral": 0.729,
+                    "positive": 0.271
+                  },
+                  "stats": {
+                    "avg_sentence_words": 8.0,
+                    "avg_word_length": 4.25,
+                    "characters": 42,
+                    "characters_no_spaces": 35,
+                    "paragraphs": 1,
+                    "reading_time_seconds": 2,
+                    "sentences": 1,
+                    "speaking_time_seconds": 3,
+                    "unique_words": 8,
+                    "words": 8
+                  }
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 50,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 50000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/sentiment": {
       "get": {
-        "summary": "Sentiment",
+        "operationId": "analyzeSentiment",
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Score sentiment (positive/negative)",
+        "description": "Scores sentiment with VADER, a lexicon and rule-based model tuned for reviews and social media (handles emphasis, negation, emoji and slang). Returns a label, a -1..+1 compound score, positive/neutral/negative proportions and per-sentence scores. Best for English.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Text",
+            "description": "Text to analyse (UTF-8, max 50,000 characters; longer text returns 413). Long text in a query string is subject to URL length limits of your HTTP client, so keep GET requests to a few KB.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 50000
             },
-            "example": "I love this product but shipping was slow."
+            "example": "I love this product. But shipping was slow and the box was damaged."
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Sentiment.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Sentiment"
+                },
+                "example": {
+                  "compound": -0.3071,
+                  "label": "negative",
+                  "negative": 0.221,
+                  "neutral": 0.63,
+                  "positive": 0.149,
+                  "sentences": [
+                    {
+                      "compound": 0.6369,
+                      "text": "I love this product."
+                    },
+                    {
+                      "compound": -0.5927,
+                      "text": "But shipping was slow and the box was damaged."
+                    }
+                  ]
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 50,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 50000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/language": {
       "get": {
-        "summary": "Detect language",
+        "operationId": "detectLanguage",
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Detect the language of text",
+        "description": "Identifies the language among 55 supported (ISO 639-1 codes) with a probability, plus up to 5 candidates. Accuracy improves with longer text; very short or letter-free text returns 422.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Text",
+            "description": "Text to analyse (UTF-8, max 50,000 characters; longer text returns 413). Long text in a query string is subject to URL length limits of your HTTP client, so keep GET requests to a few KB.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 50000
             },
-            "example": "Bonjour tout le monde"
+            "example": "Bonjour tout le monde, comment allez-vous ?"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Language.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Language"
+                },
+                "example": {
+                  "candidates": [
+                    {
+                      "confidence": 1.0,
+                      "language": "fr"
+                    }
+                  ],
+                  "confidence": 1.0,
+                  "language": "fr"
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 50,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 50000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing text, or language could not be detected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not detect language (text too short or no letters)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/readability": {
       "get": {
-        "summary": "Readability scores",
+        "operationId": "scoreReadability",
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Score readability and grade level",
+        "description": "Computes Flesch Reading Ease, Flesch-Kincaid grade, Gunning Fog, SMOG, Coleman-Liau and ARI, a consensus grade, a plain-English level and reading time. Designed for English prose.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Text",
+            "description": "Text to analyse (UTF-8, max 50,000 characters; longer text returns 413). Long text in a query string is subject to URL length limits of your HTTP client, so keep GET requests to a few KB.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 50000
             },
-            "example": "The quick brown fox jumps over the lazy dog. It was not amused."
+            "example": "Bristol is a city in south west England with a population of around 470,000. It sits on the River Avon and has a long maritime history. The city is known for the Clifton Suspension Bridge, designed by Isambard Kingdom Brunel."
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Readability metrics.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Readability"
+                },
+                "example": {
+                  "automated_readability_index": 7.11,
+                  "coleman_liau_index": 9.66,
+                  "complex_words": 12,
+                  "consensus_grade": 9.66,
+                  "flesch_kincaid_grade": 8.48,
+                  "flesch_reading_ease": 56.53,
+                  "gunning_fog": 11.4,
+                  "level": "fairly difficult",
+                  "reading_time_seconds": 19,
+                  "smog_index": 11.21,
+                  "syllables": 122
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 50,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 50000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/keywords": {
       "get": {
-        "summary": "Keywords & key phrases",
+        "operationId": "extractKeywords",
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Extract keywords and key phrases",
+        "description": "Finds the most relevant single words (stop words removed, scored by frequency and length) and the most frequent multi-word phrases. Useful for tagging, SEO and search indexing. English stop-word list.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Text",
+            "description": "Text to analyse (UTF-8, max 50,000 characters; longer text returns 413). Long text in a query string is subject to URL length limits of your HTTP client, so keep GET requests to a few KB.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 50000
             },
-            "example": "Cloud computing lets small businesses scale cloud storage cheaply."
+            "example": "Bristol is a city in south west England with a population of around 470,000. It sits on the River Avon and has a long maritime history. The city is known for the Clifton Suspension Bridge, designed by Isambard Kingdom Brunel."
           },
           {
             "name": "top",
             "in": "query",
             "required": false,
-            "description": "1-50",
+            "description": "Number of keywords and phrases to return (clamped to 1-50).",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
             },
-            "example": 10
+            "example": 5
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Keywords.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Keywords"
+                },
+                "example": {
+                  "keywords": [
+                    {
+                      "count": 2,
+                      "keyword": "bristol",
+                      "score": 0.1511
+                    },
+                    {
+                      "count": 2,
+                      "keyword": "city",
+                      "score": 0.1224
+                    },
+                    {
+                      "count": 1,
+                      "keyword": "population",
+                      "score": 0.0847
+                    },
+                    {
+                      "count": 1,
+                      "keyword": "maritime",
+                      "score": 0.079
+                    },
+                    {
+                      "count": 1,
+                      "keyword": "england",
+                      "score": 0.0755
+                    }
+                  ],
+                  "phrases": [
+                    {
+                      "count": 1,
+                      "phrase": "south west england"
+                    },
+                    {
+                      "count": 1,
+                      "phrase": "river avon"
+                    },
+                    {
+                      "count": 1,
+                      "phrase": "long maritime history"
+                    },
+                    {
+                      "count": 1,
+                      "phrase": "clifton suspension bridge designed"
+                    },
+                    {
+                      "count": 1,
+                      "phrase": "isambard kingdom brunel bristol"
+                    }
+                  ]
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 50,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 50000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/summarize": {
       "get": {
-        "summary": "Extractive summary",
+        "operationId": "summarizeText",
+        "tags": [
+          "Transform"
+        ],
+        "summary": "Summarise text (extractive)",
+        "description": "Selects the most informative sentences (word-frequency scoring with a lead-sentence bonus) and returns them in original order. Sentences of 20 characters or fewer are ignored. Deterministic and fast; no generative model, so nothing is invented.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Text",
+            "description": "Text to analyse (UTF-8, max 50,000 characters; longer text returns 413). Long text in a query string is subject to URL length limits of your HTTP client, so keep GET requests to a few KB.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 50000
             },
-            "example": "Long article text..."
+            "example": "Bristol is a city in south west England with a population of around 470,000. It sits on the River Avon and has a long maritime history. The city is known for the Clifton Suspension Bridge, designed by Isambard Kingdom Brunel."
           },
           {
             "name": "sentences",
             "in": "query",
             "required": false,
-            "description": "1-20",
+            "description": "Number of sentences in the summary (clamped to 1-20).",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 3
             },
-            "example": 3
+            "example": 2
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Summary.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Summary"
+                },
+                "example": {
+                  "original_sentences": 6,
+                  "sentences": 2,
+                  "summary": "Bristol is a city in south west England with a population of around 470,000. The city is known for the Clifton Suspension Bridge, designed by Isambard Kingdom Brunel."
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 50,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 50000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/profanity": {
       "get": {
-        "summary": "Profanity filter",
+        "operationId": "filterProfanity",
+        "tags": [
+          "Moderation"
+        ],
+        "summary": "Detect and mask profanity",
+        "description": "Detects English swear words and simple variants (for example plural or -ing forms) and returns a censored copy where each letter is replaced by the mask character.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Text",
+            "description": "Text to analyse (UTF-8, max 50,000 characters; longer text returns 413). Long text in a query string is subject to URL length limits of your HTTP client, so keep GET requests to a few KB.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 50000
             },
-            "example": "What the heck"
+            "example": "What the hell, this is bullshit"
           },
           {
             "name": "mask",
             "in": "query",
             "required": false,
-            "description": "Mask character",
+            "description": "Masking character (only the first character is used).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 1,
+              "default": "*"
             },
             "example": "*"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Profanity result.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Profanity"
+                },
+                "example": {
+                  "censored": "What the hell, this is ********",
+                  "contains_profanity": true,
+                  "count": 1,
+                  "words": [
+                    "bullshit"
+                  ]
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 50,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 50000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/slugify": {
       "get": {
-        "summary": "Slugify",
+        "operationId": "slugifyText",
+        "tags": [
+          "Transform"
+        ],
+        "summary": "Convert text to a URL slug",
+        "description": "Transliterates accents to ASCII, lower-cases, and joins words with the separator to create a clean URL slug (max 200 characters).",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Text",
+            "description": "Text to analyse (UTF-8, max 50,000 characters; longer text returns 413). Long text in a query string is subject to URL length limits of your HTTP client, so keep GET requests to a few KB.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 50000
             },
-            "example": "H\u00e9llo W\u00f6rld! 2026"
+            "example": "Héllo Wörld! 2026 Edition"
           },
           {
             "name": "separator",
             "in": "query",
             "required": false,
-            "description": "- or _",
+            "description": "Word separator: `-` or `_`. Anything else falls back to `-`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "-",
+                "_"
+              ],
+              "default": "-"
             },
             "example": "-"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Slug.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Slug"
+                },
+                "example": {
+                  "slug": "hello-world-2026-edition"
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 50,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 50000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/stats": {
       "get": {
-        "summary": "Text statistics",
+        "operationId": "getTextStats",
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Count words, sentences and reading time",
+        "description": "Counts characters, words, unique words, sentences and paragraphs, and estimates reading (238 wpm) and speaking (150 wpm) time.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Text",
+            "description": "Text to analyse (UTF-8, max 50,000 characters; longer text returns 413). Long text in a query string is subject to URL length limits of your HTTP client, so keep GET requests to a few KB.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 50000
             },
-            "example": "Hello world. Second sentence."
+            "example": "Bristol is a city in south west England with a population of around 470,000. It sits on the River Avon and has a long maritime history. The city is known for the Clifton Suspension Bridge, designed by Isambard Kingdom Brunel."
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Statistics.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/TextStats"
+                },
+                "example": {
+                  "avg_sentence_words": 12.5,
+                  "avg_word_length": 4.73,
+                  "characters": 449,
+                  "characters_no_spaces": 374,
+                  "paragraphs": 1,
+                  "reading_time_seconds": 19,
+                  "sentences": 6,
+                  "speaking_time_seconds": 30,
+                  "unique_words": 56,
+                  "words": 75
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 50,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 50000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -318,7 +801,7 @@
         "tags": [
           "MCP"
         ],
-        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing TextKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "description": "Model Context Protocol (MCP) server for TextKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://textkit-sentiment-language-readability-keywords.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: textkit-sentiment-language-readability-keywords.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"textkit\": {\n      \"url\": \"https://textkit-sentiment-language-readability-keywords.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"textkit-sentiment-language-readability-keywords.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"textkit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://textkit-sentiment-language-readability-keywords.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:textkit-sentiment-language-readability-keywords.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://textkit-sentiment-language-readability-keywords.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: textkit-sentiment-language-readability-keywords.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
         "requestBody": {
           "required": true,
           "content": {
@@ -358,6 +841,409 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "Sentiment": {
+        "type": "object",
+        "description": "Sentiment scores (VADER).",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "positive if compound >= 0.05, negative if <= -0.05, otherwise neutral.",
+            "enum": [
+              "positive",
+              "neutral",
+              "negative"
+            ]
+          },
+          "compound": {
+            "type": "number",
+            "description": "Normalised overall score from -1 (most negative) to +1 (most positive).",
+            "minimum": -1,
+            "maximum": 1
+          },
+          "positive": {
+            "type": "number",
+            "description": "Share of the text rated positive (0-1)."
+          },
+          "neutral": {
+            "type": "number",
+            "description": "Share rated neutral (0-1)."
+          },
+          "negative": {
+            "type": "number",
+            "description": "Share rated negative (0-1)."
+          },
+          "sentences": {
+            "type": "array",
+            "description": "Per-sentence compound scores (up to 50 sentences, text cut to 300 chars). Null when the text is a single sentence.",
+            "items": {
+              "type": "object",
+              "description": "Sentence score.",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "Sentence."
+                },
+                "compound": {
+                  "type": "number",
+                  "description": "Compound score for the sentence."
+                }
+              }
+            },
+            "nullable": true
+          }
+        }
+      },
+      "Language": {
+        "type": "object",
+        "description": "Detected language.",
+        "properties": {
+          "language": {
+            "type": "string",
+            "description": "ISO 639-1 code of the most likely language (zh-cn / zh-tw for Chinese).",
+            "example": "en"
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Probability 0-1."
+          },
+          "candidates": {
+            "type": "array",
+            "description": "Up to 5 candidate languages, most likely first.",
+            "items": {
+              "type": "object",
+              "description": "Candidate.",
+              "properties": {
+                "language": {
+                  "type": "string",
+                  "description": "Language code."
+                },
+                "confidence": {
+                  "type": "number",
+                  "description": "Probability 0-1."
+                }
+              }
+            }
+          }
+        }
+      },
+      "Readability": {
+        "type": "object",
+        "description": "Readability metrics.",
+        "properties": {
+          "flesch_reading_ease": {
+            "type": "number",
+            "description": "Flesch Reading Ease (higher is easier; 60-70 is plain English)."
+          },
+          "level": {
+            "type": "string",
+            "description": "Plain-English band for the Flesch score.",
+            "enum": [
+              "very easy",
+              "easy",
+              "fairly easy",
+              "standard",
+              "fairly difficult",
+              "difficult",
+              "very difficult"
+            ]
+          },
+          "flesch_kincaid_grade": {
+            "type": "number",
+            "description": "Flesch-Kincaid US school grade."
+          },
+          "gunning_fog": {
+            "type": "number",
+            "description": "Gunning Fog index."
+          },
+          "smog_index": {
+            "type": "number",
+            "description": "SMOG index."
+          },
+          "coleman_liau_index": {
+            "type": "number",
+            "description": "Coleman-Liau index."
+          },
+          "automated_readability_index": {
+            "type": "number",
+            "description": "Automated Readability Index."
+          },
+          "consensus_grade": {
+            "type": "number",
+            "description": "Median of the five grade-level formulas."
+          },
+          "syllables": {
+            "type": "integer",
+            "description": "Estimated syllable count."
+          },
+          "complex_words": {
+            "type": "integer",
+            "description": "Words with three or more syllables."
+          },
+          "reading_time_seconds": {
+            "type": "integer",
+            "description": "Estimated silent reading time at 238 words per minute."
+          }
+        }
+      },
+      "Keywords": {
+        "type": "object",
+        "description": "Keywords and key phrases.",
+        "properties": {
+          "keywords": {
+            "type": "array",
+            "description": "Top single-word keywords (stop words and words of 2 letters or fewer removed), best first.",
+            "items": {
+              "type": "object",
+              "description": "Keyword.",
+              "properties": {
+                "keyword": {
+                  "type": "string",
+                  "description": "Lower-cased word."
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Occurrences."
+                },
+                "score": {
+                  "type": "number",
+                  "description": "Relevance: frequency share weighted by word length."
+                }
+              }
+            }
+          },
+          "phrases": {
+            "type": "array",
+            "description": "Most frequent 2-4 word phrases between stop words.",
+            "items": {
+              "type": "object",
+              "description": "Phrase.",
+              "properties": {
+                "phrase": {
+                  "type": "string",
+                  "description": "Lower-cased phrase."
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Occurrences."
+                }
+              }
+            }
+          }
+        }
+      },
+      "Profanity": {
+        "type": "object",
+        "description": "Profanity check.",
+        "properties": {
+          "contains_profanity": {
+            "type": "boolean",
+            "description": "True if any profane word was found."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of profane words found (with repeats)."
+          },
+          "words": {
+            "type": "array",
+            "description": "Distinct profane words found, lower-cased.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "censored": {
+            "type": "string",
+            "description": "Input with each profane word replaced by the mask character, letter for letter."
+          }
+        }
+      },
+      "Summary": {
+        "type": "object",
+        "description": "Extractive summary.",
+        "properties": {
+          "summary": {
+            "type": "string",
+            "description": "Highest-scoring sentences joined in their original order."
+          },
+          "sentences": {
+            "type": "integer",
+            "description": "Sentences in the summary."
+          },
+          "original_sentences": {
+            "type": "integer",
+            "description": "Sentences considered in the input (omitted when the text already had no more sentences than requested)."
+          }
+        }
+      },
+      "Slug": {
+        "type": "object",
+        "description": "URL slug.",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "ASCII slug, max 200 characters."
+          }
+        }
+      },
+      "TextStats": {
+        "type": "object",
+        "description": "Text statistics.",
+        "properties": {
+          "characters": {
+            "type": "integer",
+            "description": "All characters."
+          },
+          "characters_no_spaces": {
+            "type": "integer",
+            "description": "Characters excluding whitespace."
+          },
+          "words": {
+            "type": "integer",
+            "description": "Words."
+          },
+          "unique_words": {
+            "type": "integer",
+            "description": "Distinct words, case-insensitive."
+          },
+          "sentences": {
+            "type": "integer",
+            "description": "Sentences."
+          },
+          "paragraphs": {
+            "type": "integer",
+            "description": "Blocks separated by blank lines."
+          },
+          "avg_word_length": {
+            "type": "number",
+            "description": "Mean letters per word."
+          },
+          "avg_sentence_words": {
+            "type": "number",
+            "description": "Mean words per sentence."
+          },
+          "reading_time_seconds": {
+            "type": "integer",
+            "description": "Reading time at 238 wpm."
+          },
+          "speaking_time_seconds": {
+            "type": "integer",
+            "description": "Speaking time at 150 wpm."
+          }
+        }
+      },
+      "Analysis": {
+        "type": "object",
+        "description": "Combined analysis.",
+        "properties": {
+          "stats": {
+            "$ref": "#/components/schemas/TextStats"
+          },
+          "sentiment": {
+            "$ref": "#/components/schemas/Sentiment"
+          },
+          "keywords": {
+            "type": "array",
+            "description": "Top 10 keywords.",
+            "items": {
+              "type": "object",
+              "description": "Keyword.",
+              "properties": {
+                "keyword": {
+                  "type": "string",
+                  "description": "Word."
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "Occurrences."
+                },
+                "score": {
+                  "type": "number",
+                  "description": "Relevance score."
+                }
+              }
+            }
+          },
+          "language": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Language"
+              }
+            ],
+            "nullable": true,
+            "description": "Null if the language could not be detected."
+          },
+          "readability": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Readability"
+              }
+            ],
+            "nullable": true,
+            "description": "Null if the text has no words."
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Unprocessable: a required parameter is missing or a value is invalid. The `error` text says which.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "A required parameter is missing or invalid"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
           }
         }
       }
