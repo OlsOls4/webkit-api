@@ -14,3 +14,8 @@ maxminddb==2.8.2
 pypdf==6.1.1
 fpdf2==2.8.4
 markdown==3.9
+holidays==0.106
+tzfpy==2.1.1
+tiktoken==0.14.0
+ua-parser==1.0.2
+ua-parser-builtins==202610
