@@ -90,7 +90,7 @@ def rpc(msg, request, kit=None):
         if not main.gate_ok(request):
             return ok({"isError": True, "content": [{"type": "text", "text": "Tool calls require a RapidAPI subscription. Subscribe to 'APIKit MCP' at https://rapidapi.com/user/Olly-1VN9JTXKG and connect via the RapidAPI URL with your X-RapidAPI-Key header."}]})
         try: return ok(call(p.get("name"), p.get("arguments"), kit))
-        except Exception as e: return ok({"isError": True, "content": [{"type": "text", "text": f"Tool error: {type(e).__name__}"}]})
+        except Exception as e: return ok({"isError": True, "content": [{"type": "text", "text": f"Tool error: {type(e).__name__}: {str(e)[:200]}"}]})
     if m in ("resources/list",): return ok({"resources": []})
     if m in ("prompts/list",): return ok({"prompts": []})
     return err(-32601, f"Method not found: {m}")
