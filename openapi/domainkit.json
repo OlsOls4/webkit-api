@@ -1,0 +1,140 @@
+{
+ "openapi": "3.0.0",
+ "info": {
+  "title": "DomainKit - DNS, SSL, WHOIS & Website Tech Lookup",
+  "version": "1.0.0"
+ },
+ "servers": [
+  {
+   "url": "https://webkit-api-1003933593053.us-central1.run.app/domain"
+  }
+ ],
+ "paths": {
+  "/dns": {
+   "get": {
+    "summary": "DNS records",
+    "parameters": [
+     {
+      "name": "domain",
+      "in": "query",
+      "required": true,
+      "description": "Domain",
+      "schema": {
+       "type": "string"
+      },
+      "example": "bbc.co.uk"
+     },
+     {
+      "name": "types",
+      "in": "query",
+      "required": false,
+      "description": "Comma list of A,AAAA,MX,NS,TXT,CNAME,SOA,CAA",
+      "schema": {
+       "type": "string"
+      },
+      "example": "A,MX,TXT"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/ssl": {
+   "get": {
+    "summary": "SSL certificate check",
+    "parameters": [
+     {
+      "name": "domain",
+      "in": "query",
+      "required": true,
+      "description": "Domain",
+      "schema": {
+       "type": "string"
+      },
+      "example": "github.com"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/whois": {
+   "get": {
+    "summary": "WHOIS / RDAP and domain age",
+    "parameters": [
+     {
+      "name": "domain",
+      "in": "query",
+      "required": true,
+      "description": "Domain",
+      "schema": {
+       "type": "string"
+      },
+      "example": "google.com"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/scan": {
+   "get": {
+    "summary": "Website tech & security headers",
+    "parameters": [
+     {
+      "name": "domain",
+      "in": "query",
+      "required": true,
+      "description": "Domain",
+      "schema": {
+       "type": "string"
+      },
+      "example": "wordpress.org"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}
