@@ -1,96 +1,147 @@
 {
- "openapi": "3.0.0",
- "info": {
-  "title": "GeoIP - IP Geolocation, ASN & ISP Lookup",
-  "version": "1.0.0"
- },
- "servers": [
-  {
-   "url": "https://webkit-api-1003933593053.us-central1.run.app/geo"
-  }
- ],
- "paths": {
-  "/lookup": {
-   "get": {
-    "summary": "Look up IP",
-    "parameters": [
-     {
-      "name": "ip",
-      "in": "query",
-      "required": true,
-      "description": "IPv4 or IPv6",
-      "schema": {
-       "type": "string"
-      },
-      "example": "8.8.8.8"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
+  "openapi": "3.0.0",
+  "info": {
+    "title": "GeoIP - IP Geolocation, ASN & ISP Lookup",
+    "version": "1.0.0"
   },
-  "/me": {
-   "get": {
-    "summary": "Look up caller's IP",
-    "parameters": [],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app/geo"
     }
-   }
-  },
-  "/bulk": {
-   "post": {
-    "summary": "Bulk lookup (up to 100)",
-    "parameters": [],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "type": "object",
-        "example": {
-         "ips": [
-          "8.8.8.8",
-          "1.1.1.1",
-          "2a00:1450:4009::1"
-         ]
+  ],
+  "paths": {
+    "/lookup": {
+      "get": {
+        "summary": "Look up IP",
+        "parameters": [
+          {
+            "name": "ip",
+            "in": "query",
+            "required": true,
+            "description": "IPv4 or IPv6",
+            "schema": {
+              "type": "string"
+            },
+            "example": "8.8.8.8"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
     },
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
+    "/me": {
+      "get": {
+        "summary": "Look up caller's IP",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
+    },
+    "/bulk": {
+      "post": {
+        "summary": "Bulk lookup (up to 100)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "example": {
+                  "ips": [
+                    "8.8.8.8",
+                    "1.1.1.1",
+                    "2a00:1450:4009::1"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (GeoIP tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing GeoIP's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
     }
-   }
   }
- }
 }
