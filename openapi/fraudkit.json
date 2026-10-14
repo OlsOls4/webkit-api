@@ -2,25 +2,54 @@
   "openapi": "3.0.0",
   "info": {
     "title": "FraudKit - Fraud Risk Score for Signups & Orders (Email, IP, Phone, User-Agent)",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "description": "# FraudKit: Fraud Risk Score for Signups and Orders\n\nStop fake signups, trial abuse and risky orders with one call. FraudKit checks the email, IP address, phone number and user-agent you already collect, cross-checks them against the billing country, and returns a 0-100 risk score with clear reasons and a recommended action.\n\n**Who it's for:** SaaS products fighting trial abuse, e-commerce stores screening orders, marketplaces, fintech onboarding and community platforms.\n\n## Use cases\n- Block disposable-email and bot signups before they hit your database.\n- Send medium-risk orders to manual review and auto-approve low-risk ones.\n- Detect customers ordering through VPNs or data-centre IPs from a different country than their card.\n- Require phone or captcha verification only when the score is high.\n- Log explainable reasons for every decision for audit and chargeback disputes.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com/score?email=jane%40mailinator.com&ip=104.28.1.1&country=GB' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- The score is rules-based and fully explainable; every point is listed in `reasons`. Tune your own thresholds if `risk_level` is too strict or lenient for your business.\n- Email checks use live DNS; IP, phone and user-agent checks are local and fast.\n- FraudKit is a decision aid; combine it with your own business rules.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `422` missing or invalid parameter. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- IP country and network data: DB-IP Lite by DB-IP (https://db-ip.com), CC BY 4.0. Attribution is included in the `signals.ip.attribution` field.\n- Phone metadata: Google libphonenumber (phonenumbers library), Apache 2.0.\n- User-agent parsing: uap-core regexes via ua-parser, Apache 2.0.\n- Disposable-domain, VPN and hosting-provider lists are maintained in-house.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
   },
   "servers": [
     {
       "url": "https://webkit-api-1003933593053.us-central1.run.app/fraud"
     }
   ],
+  "tags": [
+    {
+      "name": "Risk scoring",
+      "description": "One explainable risk score from email, IP, phone, user-agent and country."
+    },
+    {
+      "name": "Device intelligence",
+      "description": "User-agent parsing and bot detection."
+    },
+    {
+      "name": "Email",
+      "description": "Disposable email domain detection."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
   "paths": {
     "/score": {
       "get": {
-        "summary": "Fraud risk score",
+        "operationId": "scoreFraudRisk",
+        "tags": [
+          "Risk scoring"
+        ],
+        "summary": "Score the fraud risk of a signup or order",
+        "description": "Combines up to five signals into one explainable 0-100 risk score with a level, a recommended action and plain-English reasons: email quality (syntax, MX, disposable, role, typo), IP network (VPN/proxy, hosting, country), phone validity and line type, user-agent bot detection, and consistency with the billing country. Send at least one of email, ip, phone or user_agent; more signals give a better score.\n\n**Scoring weights:** disposable email +40, invalid email +35, risky email +15, role account +5; VPN/proxy IP +30, hosting/datacenter IP +25, private IP +10, IP country differs from billing country +15; invalid phone +25, VoIP/premium/shared-cost/personal line +15, phone country differs from billing country +10 (or from IP country +5); bot or automation user-agent +30, unrecognised browser +10. GG, JE and IM count as GB for country matching.",
         "parameters": [
           {
             "name": "email",
             "in": "query",
             "required": false,
-            "description": "Customer email",
+            "description": "Customer email address (max 254 characters read). URL-encode `+` as `%2B`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "email"
             },
             "example": "jane@mailinator.com"
           },
@@ -28,7 +57,7 @@
             "name": "ip",
             "in": "query",
             "required": false,
-            "description": "Customer IP address",
+            "description": "Customer IPv4 or IPv6 address. An invalid IP returns 422.",
             "schema": {
               "type": "string"
             },
@@ -38,7 +67,7 @@
             "name": "phone",
             "in": "query",
             "required": false,
-            "description": "Phone number (E.164 or national)",
+            "description": "Customer phone number, E.164 (URL-encode `+` as `%2B`) or national format; national numbers are read using `country`, else the IP's country.",
             "schema": {
               "type": "string"
             },
@@ -48,7 +77,7 @@
             "name": "user_agent",
             "in": "query",
             "required": false,
-            "description": "Browser user-agent string",
+            "description": "Browser User-Agent string from the customer's request (max 1000 characters read). `ua` is accepted as an alias.",
             "schema": {
               "type": "string"
             },
@@ -58,37 +87,141 @@
             "name": "country",
             "in": "query",
             "required": false,
-            "description": "Billing country (ISO 3166-1 alpha-2)",
+            "description": "Billing or declared country, ISO 3166-1 alpha-2. Enables country-mismatch checks.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[A-Za-z]{2}$"
             },
             "example": "GB"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Risk assessment.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/RiskScore"
+                },
+                "example": {
+                  "reasons": [
+                    "disposable email domain",
+                    "IP is in a hosting/datacenter network",
+                    "IP country CA differs from billing country GB",
+                    "phone country GG differs from IP country CA",
+                    "user-agent is a bot or automation tool"
+                  ],
+                  "recommendation": "block or challenge",
+                  "risk_level": "high",
+                  "risk_score": 100,
+                  "signals": {
+                    "email": {
+                      "checks": {
+                        "disposable": true,
+                        "free_provider": false,
+                        "mx_found": true,
+                        "role_account": false,
+                        "syntax": true
+                      },
+                      "did_you_mean": null,
+                      "domain": "mailinator.com",
+                      "email": "jane@mailinator.com",
+                      "mx_records": [
+                        "mail.mailinator.com",
+                        "mail2.mailinator.com"
+                      ],
+                      "score": 90,
+                      "verdict": "disposable"
+                    },
+                    "ip": {
+                      "asn": 13335,
+                      "attribution": "IP geolocation by DB-IP (https://db-ip.com), CC BY 4.0",
+                      "continent": "North America",
+                      "continent_code": "NA",
+                      "country": "Canada",
+                      "country_code": "CA",
+                      "ip": "104.28.1.1",
+                      "is_eu": false,
+                      "is_global": true,
+                      "is_loopback": false,
+                      "is_multicast": false,
+                      "is_private": false,
+                      "organization": "Cloudflare, Inc.",
+                      "version": 4
+                    },
+                    "phone": {
+                      "carrier": "JT",
+                      "country_code": 44,
+                      "e164": "+447911123456",
+                      "input": "+447911123456",
+                      "international": "+44 7911 123456",
+                      "line_type": "mobile",
+                      "location": "Guernsey",
+                      "national": "07911 123456",
+                      "national_number": "7911123456",
+                      "possible": true,
+                      "region": "GG",
+                      "rfc3966": "tel:+44-7911-123456",
+                      "timezones": [
+                        "Europe/Guernsey",
+                        "Europe/Isle_of_Man",
+                        "Europe/Jersey",
+                        "Europe/London"
+                      ],
+                      "valid": true
+                    },
+                    "user_agent": {
+                      "browser": "Python Requests",
+                      "browser_version": "2.32",
+                      "device": null,
+                      "device_brand": null,
+                      "is_bot": true,
+                      "is_mobile": false,
+                      "os": null,
+                      "os_version": null,
+                      "user_agent": "python-requests/2.32"
+                    }
+                  }
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "No signal supplied, or the IP is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Provide at least one of: email, ip, phone, user_agent"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
-        },
-        "description": "Combine email, IP, phone and user-agent signals into a 0-100 risk score with reasons and an allow/review/block recommendation. Provide at least one field. POST JSON with the same keys also works."
+        }
       }
     },
     "/user-agent": {
       "get": {
-        "summary": "Parse user-agent",
+        "operationId": "parseUserAgent",
+        "tags": [
+          "Device intelligence"
+        ],
+        "summary": "Parse a user-agent and detect bots",
+        "description": "Parses a User-Agent string into browser, version, OS, device and brand, and flags mobile devices and bots (crawlers, headless browsers, automation frameworks and HTTP libraries).",
         "parameters": [
           {
             "name": "ua",
             "in": "query",
-            "required": true,
-            "description": "User-agent string",
+            "required": false,
+            "description": "User-Agent string to parse (max 1000 characters read). `user_agent` is accepted as an alias. If omitted, the User-Agent header of this request is parsed.",
             "schema": {
               "type": "string"
             },
@@ -97,44 +230,102 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Parsed user-agent.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/UserAgent"
+                },
+                "example": {
+                  "browser": "Mobile Safari",
+                  "browser_version": "17.5",
+                  "device": "iPhone",
+                  "device_brand": "Apple",
+                  "is_bot": false,
+                  "is_mobile": true,
+                  "os": "iOS",
+                  "os_version": "17.5",
+                  "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
-        },
-        "description": "Browser, OS, device and bot detection."
+        }
       }
     },
     "/disposable": {
       "get": {
-        "summary": "Disposable email domain check",
+        "operationId": "checkDisposableEmail",
+        "tags": [
+          "Email"
+        ],
+        "summary": "Check for a disposable email domain",
+        "description": "Fast check of whether a domain (or the domain of an email address) belongs to a known disposable or temporary inbox provider such as mailinator.com or yopmail.com. No DNS lookup is made.",
         "parameters": [
           {
             "name": "domain",
             "in": "query",
-            "required": true,
-            "description": "Domain or email",
+            "required": false,
+            "description": "Domain to check, or a full email address (the part after @ is used). Provide this or `email`.",
             "schema": {
               "type": "string"
             },
             "example": "mailinator.com"
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "description": "Alternative to `domain`: an email address whose domain is checked.",
+            "schema": {
+              "type": "string",
+              "format": "email"
+            },
+            "example": "jane@mailinator.com"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Disposable check.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/DisposableResult"
+                },
+                "example": {
+                  "disposable": true,
+                  "domain": "mailinator.com"
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Neither domain nor email supplied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "domain or email query parameter is required"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -146,7 +337,7 @@
         "tags": [
           "MCP"
         ],
-        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing FraudKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "description": "Model Context Protocol (MCP) server for FraudKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"fraudkit\": {\n      \"url\": \"https://fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"fraudkit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: fraudkit-fraud-risk-score-for-signups-orders.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
         "requestBody": {
           "required": true,
           "content": {
@@ -186,6 +377,390 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "RiskScore": {
+        "type": "object",
+        "description": "Risk assessment.",
+        "properties": {
+          "risk_score": {
+            "type": "integer",
+            "description": "0 (no risk signals) to 100 (capped). Sum of the weights of triggered signals.",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "risk_level": {
+            "type": "string",
+            "description": "low (<30), medium (30-59) or high (>=60).",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "recommendation": {
+            "type": "string",
+            "description": "Suggested action for the risk level.",
+            "enum": [
+              "allow",
+              "review",
+              "block or challenge"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "description": "Human-readable reason for every signal that added risk, in evaluation order.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "signals": {
+            "type": "object",
+            "description": "Raw results for each input you supplied (keys appear only for supplied inputs).",
+            "properties": {
+              "email": {
+                "$ref": "#/components/schemas/EmailSignal"
+              },
+              "ip": {
+                "$ref": "#/components/schemas/IpSignal"
+              },
+              "phone": {
+                "$ref": "#/components/schemas/PhoneSignal"
+              },
+              "user_agent": {
+                "$ref": "#/components/schemas/UserAgent"
+              }
+            }
+          }
+        }
+      },
+      "EmailSignal": {
+        "type": "object",
+        "description": "Email signal.",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Address checked."
+          },
+          "verdict": {
+            "type": "string",
+            "description": "Email verdict.",
+            "enum": [
+              "deliverable",
+              "risky",
+              "disposable",
+              "invalid"
+            ]
+          },
+          "score": {
+            "type": "integer",
+            "description": "Email quality score 0-100."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Domain."
+          },
+          "mx_records": {
+            "type": "array",
+            "description": "Mail servers.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "did_you_mean": {
+            "type": "string",
+            "description": "Typo correction suggestion.",
+            "nullable": true
+          },
+          "checks": {
+            "type": "object",
+            "description": "Checks.",
+            "properties": {
+              "syntax": {
+                "type": "boolean",
+                "description": "Valid syntax."
+              },
+              "mx_found": {
+                "type": "boolean",
+                "description": "Mail server found."
+              },
+              "disposable": {
+                "type": "boolean",
+                "description": "Disposable domain."
+              },
+              "role_account": {
+                "type": "boolean",
+                "description": "Role mailbox (info@, admin@)."
+              },
+              "free_provider": {
+                "type": "boolean",
+                "description": "Free mailbox provider."
+              }
+            }
+          }
+        }
+      },
+      "IpSignal": {
+        "type": "object",
+        "description": "IP signal (country-level geolocation and network). For non-public IPs only the flags plus `country: null` and `asn: null` are present.",
+        "properties": {
+          "ip": {
+            "type": "string",
+            "description": "IP address."
+          },
+          "version": {
+            "type": "integer",
+            "description": "4 or 6."
+          },
+          "is_private": {
+            "type": "boolean",
+            "description": "Private range."
+          },
+          "is_global": {
+            "type": "boolean",
+            "description": "Publicly routable."
+          },
+          "is_multicast": {
+            "type": "boolean",
+            "description": "Multicast."
+          },
+          "is_loopback": {
+            "type": "boolean",
+            "description": "Loopback."
+          },
+          "country_code": {
+            "type": "string",
+            "description": "ISO alpha-2 country.",
+            "nullable": true
+          },
+          "country": {
+            "type": "string",
+            "description": "Country name.",
+            "nullable": true
+          },
+          "continent_code": {
+            "type": "string",
+            "description": "Continent code.",
+            "nullable": true
+          },
+          "continent": {
+            "type": "string",
+            "description": "Continent.",
+            "nullable": true
+          },
+          "is_eu": {
+            "type": "boolean",
+            "description": "EU member state."
+          },
+          "asn": {
+            "type": "integer",
+            "description": "Autonomous System Number.",
+            "nullable": true
+          },
+          "organization": {
+            "type": "string",
+            "description": "Network operator.",
+            "nullable": true
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Data attribution required by the IP data licence."
+          }
+        }
+      },
+      "PhoneSignal": {
+        "type": "object",
+        "description": "Phone signal. Unparseable input yields only `input`, `valid`, `possible` and `error`.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Number as received."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Valid number."
+          },
+          "possible": {
+            "type": "boolean",
+            "description": "Plausible length."
+          },
+          "error": {
+            "type": "string",
+            "description": "Parse error."
+          },
+          "e164": {
+            "type": "string",
+            "description": "E.164 format."
+          },
+          "international": {
+            "type": "string",
+            "description": "International format."
+          },
+          "national": {
+            "type": "string",
+            "description": "National format."
+          },
+          "rfc3966": {
+            "type": "string",
+            "description": "tel: URI."
+          },
+          "country_code": {
+            "type": "integer",
+            "description": "Calling code."
+          },
+          "national_number": {
+            "type": "string",
+            "description": "National number."
+          },
+          "region": {
+            "type": "string",
+            "description": "ISO region.",
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "description": "Location.",
+            "nullable": true
+          },
+          "carrier": {
+            "type": "string",
+            "description": "Original carrier.",
+            "nullable": true
+          },
+          "line_type": {
+            "type": "string",
+            "description": "Line type, e.g. mobile, fixed_line, voip."
+          },
+          "timezones": {
+            "type": "array",
+            "description": "IANA time zones.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "UserAgent": {
+        "type": "object",
+        "description": "Parsed user-agent.",
+        "properties": {
+          "user_agent": {
+            "type": "string",
+            "description": "User-agent as received (max 1000 chars)."
+          },
+          "browser": {
+            "type": "string",
+            "description": "Browser or client family, 'Other' if unknown."
+          },
+          "browser_version": {
+            "type": "string",
+            "description": "Major.minor version.",
+            "nullable": true
+          },
+          "os": {
+            "type": "string",
+            "description": "Operating system family.",
+            "nullable": true
+          },
+          "os_version": {
+            "type": "string",
+            "description": "OS major.minor version.",
+            "nullable": true
+          },
+          "device": {
+            "type": "string",
+            "description": "Device family, e.g. iPhone.",
+            "nullable": true
+          },
+          "device_brand": {
+            "type": "string",
+            "description": "Device brand, e.g. Apple.",
+            "nullable": true
+          },
+          "is_mobile": {
+            "type": "boolean",
+            "description": "Mobile device."
+          },
+          "is_bot": {
+            "type": "boolean",
+            "description": "Crawler, headless browser, automation tool or HTTP library (curl, python-requests, Puppeteer and so on)."
+          }
+        }
+      },
+      "DisposableResult": {
+        "type": "object",
+        "description": "Disposable check.",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Lower-cased domain checked."
+          },
+          "disposable": {
+            "type": "boolean",
+            "description": "Domain is a known disposable provider."
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Unprocessable: a required parameter is missing or a value is invalid. The `error` text says which.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "A required parameter is missing or invalid"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
           }
         }
       }
