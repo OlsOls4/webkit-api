@@ -1,32 +1,32 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.OlsOls4/textkit",
-  "title": "TextKit MCP",
+  "title": "TextKit",
   "description": "Sentiment, language detection, readability, keywords, summaries and profanity filtering",
   "repository": {
     "url": "https://github.com/OlsOls4/webkit-api",
     "source": "github"
   },
   "version": "1.1.0",
-  "websiteUrl": "https://rapidapi.com/Olly-1VN9JTXKG/api/apikit-mcp-69-tools-for-ai-agents",
+  "websiteUrl": "https://rapidapi.com/Olly-1VN9JTXKG/api/textkit-sentiment-language-readability-keywords",
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://apikit-mcp-69-tools-for-ai-agents.p.rapidapi.com/textkit",
+      "url": "https://textkit-sentiment-language-readability-keywords.p.rapidapi.com/mcp",
       "headers": [
         {
           "name": "X-RapidAPI-Key",
-          "description": "Your RapidAPI key (subscribe to APIKit MCP on RapidAPI; free plan available)",
+          "description": "Your RapidAPI key (subscribe to TextKit on RapidAPI; free plan available)",
           "isRequired": true,
           "isSecret": true
         },
         {
           "name": "X-RapidAPI-Host",
-          "description": "RapidAPI host",
+          "description": "RapidAPI host for this API",
           "isRequired": true,
-          "default": "apikit-mcp-69-tools-for-ai-agents.p.rapidapi.com",
+          "default": "textkit-sentiment-language-readability-keywords.p.rapidapi.com",
           "choices": [
-            "apikit-mcp-69-tools-for-ai-agents.p.rapidapi.com"
+            "textkit-sentiment-language-readability-keywords.p.rapidapi.com"
           ]
         }
       ]
