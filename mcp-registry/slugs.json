@@ -1,0 +1,15 @@
+{
+ "webkit": "webkit-email-validator-link-preview-article-extractor",
+ "domainkit": "domainkit-dns-ssl-whois-website-tech-lookup",
+ "qrkit": "qrkit-qr-code-barcode-generator",
+ "textkit": "textkit-sentiment-language-readability-keywords",
+ "phonekit": "phonekit-phone-number-validation-carrier-line-type",
+ "validkit": "validkit-iban-vat-card-isbn-bic-postcode-validator",
+ "geoip": "geoip-ip-geolocation-asn-isp-lookup",
+ "dockit": "dockit-pdf-text-extraction-markdown-to-pdf",
+ "fraudkit": "fraudkit-fraud-risk-score-for-signups-orders",
+ "imagekit": "imagekit-resize-convert-to-webp-compress-crop",
+ "ukpostcode": "uk-postcodekit-postcode-lookup-nearest-distance",
+ "llmkit": "llmkit-token-counter-rag-chunker-json-repair",
+ "calkit": "calkit-public-holidays-business-days-timezones"
+}
