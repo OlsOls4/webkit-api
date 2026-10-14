@@ -35,7 +35,8 @@ jobs:
           ENVFLAG=""
           if [ -n "$PROXY_SECRET" ]; then ENVFLAG="--set-env-vars=RAPIDAPI_PROXY_SECRET=$PROXY_SECRET"; fi
           gcloud run deploy ${{ matrix.service }} --source ${{ matrix.dir }} --project webkit-api --region us-central1 \
-            --allow-unauthenticated --memory 512Mi --cpu 1 --max-instances 1 --quiet $ENVFLAG
+            --allow-unauthenticated --memory 512Mi --cpu 1 --max-instances 1 --quiet $ENVFLAG > out.txt 2>&1 || {
+            echo "::error::$(tail -c 1500 out.txt | tr '\n' ' ')"; exit 1; }
       - name: Smoke test
         run: |
           URL=$(gcloud run services describe ${{ matrix.service }} --project webkit-api --region us-central1 --format='value(status.url)')
