@@ -109,7 +109,7 @@ def extract(url, max_chars):
 @functions_framework.http
 def handler(request):
     path, a = request.path.rstrip("/") or "/", request.args
-    for prefix, mod in (("/domain", "domainkit"), ("/qrkit", "qrkit"), ("/text", "textkit")):
+    for prefix, mod in (("/domain", "domainkit"), ("/qrkit", "qrkit"), ("/text", "textkit"), ("/phone", "phonekit"), ("/valid", "validkit"), ("/geo", "geoip"), ("/doc", "dockit")):
         if path == prefix or path.startswith(prefix + "/"):
             import importlib
             return importlib.import_module(mod + ".main").dispatch(request, path[len(prefix):] or "/")
