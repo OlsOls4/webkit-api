@@ -123,11 +123,23 @@ def handler(request):
     if path == "/_proxyhash":
         v = request.headers.get("X-RapidAPI-Proxy-Secret", "")
         return jsonify(sha256=hashlib.sha256(v.encode()).hexdigest() if v else None)
+    if path == "/mcp" or path.startswith("/mcp/"):
+        import mcpserver
+        return mcpserver.handle(request)
     if path not in ("/", "/health") and ALLOWED_HASHES:
         v = request.headers.get("X-RapidAPI-Proxy-Secret", "")
         if not v or hashlib.sha256(v.encode()).hexdigest() not in ALLOWED_HASHES:
             return jsonify(error="Direct access is disabled. Subscribe on RapidAPI: https://rapidapi.com/user/Olly-1VN9JTXKG"), 403
-    for prefix, mod in (("/domain", "domainkit"), ("/qrkit", "qrkit"), ("/text", "textkit"), ("/phone", "phonekit"), ("/valid", "validkit"), ("/geo", "geoip"), ("/doc", "dockit")):
+    return route(request)
+
+def gate_ok(request):
+    if not ALLOWED_HASHES: return True
+    v = request.headers.get("X-RapidAPI-Proxy-Secret", "")
+    return bool(v) and hashlib.sha256(v.encode()).hexdigest() in ALLOWED_HASHES
+
+def route(request):
+    path, a = request.path.rstrip("/") or "/", request.args
+    for prefix, mod in (("/domain", "domainkit"), ("/qrkit", "qrkit"), ("/text", "textkit"), ("/phone", "phonekit"), ("/valid", "validkit"), ("/geo", "geoip"), ("/doc", "dockit"), ("/fraud", "fraudkit"), ("/llm", "llmkit"), ("/image", "imagekit"), ("/cal", "calkit"), ("/postcode", "ukpostcode")):
         if path == prefix or path.startswith(prefix + "/"):
             import importlib
             return importlib.import_module(mod + ".main").dispatch(request, path[len(prefix):] or "/")
