@@ -50,4 +50,4 @@ jobs:
           curl -fsS "$URL/health"
           # Direct access must be blocked (RapidAPI-only gate); expect 403
           code=$(curl -s -o /dev/null -w "%{http_code}" "$URL/geo/lookup?ip=8.8.8.8"); echo "direct=$code"; [ "$code" = "403" ]
-          curl -fsS -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$URL/mcp" | grep -q fraudkit_score
+          curl -fsS -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$URL/fraud/mcp" | grep -q fraudkit_score
