@@ -2,223 +2,507 @@
   "openapi": "3.0.0",
   "info": {
     "title": "ValidKit - IBAN, VAT, Card, ISBN, BIC & Postcode Validator",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "description": "# ValidKit: IBAN, VAT, Card, ISBN, BIC and Postcode Validator\n\nInstant, offline validation for the identifiers that break checkout, invoicing and KYC forms: IBAN, EU VAT, payment card (Luhn and brand), ISBN, BIC/SWIFT, EAN/GTIN and postcodes. Each call returns `valid` plus a normalised value, so you can both reject typos and store clean data.\n\n**Who it's for:** fintech and payments teams, B2B invoicing and e-commerce checkouts, marketplaces, bookshops and anyone building forms that collect bank, tax or product identifiers.\n\n## Use cases\n- Catch IBAN typos before a payout fails and costs a return fee.\n- Check a B2B customer's EU VAT number format before applying reverse charge.\n- Give instant card-number feedback and brand icons in checkout without touching your PSP.\n- Convert ISBN-10 to ISBN-13 when importing a book catalogue.\n- Validate and normalise postcodes in address forms for 24 countries.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com/iban?value=GB82WEST12345698765432' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- All checks are algorithmic (format, length and checksum). Nothing is looked up live: a valid IBAN or VAT number is well-formed, not proven to exist.\n- Invalid values return HTTP 200 with `valid: false`; HTTP errors are reserved for missing parameters.\n- Card numbers are processed in memory, never stored, and only a masked form is returned.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `422` missing or invalid parameter. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Validation algorithms from python-stdnum (LGPL 2.1+).\n- Card brand prefixes and postcode formats are maintained in-house from public specifications.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
   },
   "servers": [
     {
       "url": "https://webkit-api-1003933593053.us-central1.run.app/valid"
     }
   ],
+  "tags": [
+    {
+      "name": "Banking",
+      "description": "IBAN and BIC/SWIFT validation."
+    },
+    {
+      "name": "Tax",
+      "description": "EU VAT number format validation."
+    },
+    {
+      "name": "Payments",
+      "description": "Card number checksum and brand detection."
+    },
+    {
+      "name": "Publishing",
+      "description": "ISBN validation and conversion."
+    },
+    {
+      "name": "Retail",
+      "description": "EAN/GTIN/UPC check digits."
+    },
+    {
+      "name": "Addresses",
+      "description": "Postcode format validation for 24 countries."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
   "paths": {
     "/iban": {
       "get": {
-        "summary": "Validate IBAN",
+        "operationId": "validateIban",
+        "tags": [
+          "Banking"
+        ],
+        "summary": "Validate an IBAN",
+        "description": "Checks country-specific length and structure and the ISO 7064 mod-97 checksum for IBANs from every IBAN country, and returns the compact and printed formats. Invalid values return 200 with `valid: false` and a `reason`, so you can show inline form errors.",
         "parameters": [
           {
             "name": "value",
             "in": "query",
             "required": true,
-            "description": "IBAN",
+            "description": "IBAN, with or without spaces. Max 64 characters; surrounding whitespace is ignored.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
             "example": "GB82WEST12345698765432"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "IBAN result.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/IbanResult"
+                },
+                "example": {
+                  "bank_code_hint": "WEST",
+                  "country": "GB",
+                  "formatted": "GB82 WEST 1234 5698 7654 32",
+                  "input": "GB82WEST12345698765432",
+                  "normalized": "GB82WEST12345698765432",
+                  "valid": true
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "`value` is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "value query parameter is required"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/vat": {
       "get": {
-        "summary": "Validate EU VAT number format",
+        "operationId": "validateVatNumber",
+        "tags": [
+          "Tax"
+        ],
+        "summary": "Validate an EU VAT number format",
+        "description": "Validates the format and check digits of an EU VAT identification number for all 27 member states plus XI (Northern Ireland). This is an offline check: it does not query VIES for current registration. Invalid values return 200 with `valid: false` and a `reason`, so you can show inline form errors.",
         "parameters": [
           {
             "name": "value",
             "in": "query",
             "required": true,
-            "description": "VAT number with country prefix",
+            "description": "VAT number including its 2-letter country prefix, e.g. DE136695976 or FR40303265045. Max 64 characters; surrounding whitespace is ignored.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
             "example": "DE136695976"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "VAT result.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/VatResult"
+                },
+                "example": {
+                  "country": "DE",
+                  "formatted": "DE136695976",
+                  "input": "DE136695976",
+                  "normalized": "DE136695976",
+                  "note": "Checksum/format validation; not a live VIES registration lookup.",
+                  "valid": true
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "`value` is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "value query parameter is required"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/card": {
       "get": {
-        "summary": "Card number check (Luhn + brand)",
+        "operationId": "checkCardNumber",
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Check a card number (Luhn and brand)",
+        "description": "Strips spaces and dashes, runs the Luhn checksum and detects the brand (Visa, Mastercard, Amex, Discover, Diners, JCB, UnionPay, Maestro). Returns only a masked number. Use it for instant form feedback; it does not contact any card network, so it cannot tell whether a card is active.",
         "parameters": [
           {
             "name": "value",
             "in": "query",
             "required": true,
-            "description": "Card number",
+            "description": "Card number (PAN). Spaces and dashes are allowed. Use test numbers in development. Max 64 characters; surrounding whitespace is ignored.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
-            "example": "4111111111111111"
+            "example": "4111 1111 1111 1111"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Card result.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/CardResult"
+                },
+                "example": {
+                  "brand": "visa",
+                  "length": 16,
+                  "luhn_valid": true,
+                  "masked": "411111******1111",
+                  "valid": true
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "`value` is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "value query parameter is required"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/isbn": {
       "get": {
-        "summary": "Validate ISBN",
+        "operationId": "validateIsbn",
+        "tags": [
+          "Publishing"
+        ],
+        "summary": "Validate an ISBN-10 or ISBN-13",
+        "description": "Validates ISBN-10 and ISBN-13 check digits, converts to ISBN-13 and returns the hyphenated form. Invalid values return 200 with `valid: false` and a `reason`, so you can show inline form errors.",
         "parameters": [
           {
             "name": "value",
             "in": "query",
             "required": true,
-            "description": "ISBN-10 or ISBN-13",
+            "description": "ISBN-10 or ISBN-13, hyphens optional. Max 64 characters; surrounding whitespace is ignored.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
             "example": "0306406152"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "ISBN result.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/IsbnResult"
+                },
+                "example": {
+                  "formatted": "0-306-40615-2",
+                  "input": "0306406152",
+                  "isbn13": "9780306406157",
+                  "normalized": "0306406152",
+                  "valid": true
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "`value` is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "value query parameter is required"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/bic": {
       "get": {
-        "summary": "Validate BIC/SWIFT",
+        "operationId": "validateBic",
+        "tags": [
+          "Banking"
+        ],
+        "summary": "Validate a BIC/SWIFT code",
+        "description": "Checks the structure of an 8 or 11 character BIC (institution, country, location and optional branch code). Invalid values return 200 with `valid: false` and a `reason`, so you can show inline form errors.",
         "parameters": [
           {
             "name": "value",
             "in": "query",
             "required": true,
-            "description": "BIC",
+            "description": "BIC/SWIFT code, 8 or 11 characters. Max 64 characters; surrounding whitespace is ignored.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
             "example": "DEUTDEFF"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "BIC result.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/BicResult"
+                },
+                "example": {
+                  "bank": "DEUT",
+                  "country": "DE",
+                  "input": "DEUTDEFF",
+                  "normalized": "DEUTDEFF",
+                  "valid": true
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "`value` is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "value query parameter is required"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/ean": {
       "get": {
-        "summary": "Validate EAN/GTIN barcode",
+        "operationId": "validateEan",
+        "tags": [
+          "Retail"
+        ],
+        "summary": "Validate an EAN/GTIN/UPC barcode number",
+        "description": "Validates the check digit of EAN-8, UPC-A (12 digits), EAN-13 and GTIN-14 numbers. Invalid values return 200 with `valid: false` and a `reason`, so you can show inline form errors.",
         "parameters": [
           {
             "name": "value",
             "in": "query",
             "required": true,
-            "description": "EAN",
+            "description": "EAN/GTIN digits (8, 12, 13 or 14). Max 64 characters; surrounding whitespace is ignored.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
             "example": "4006381333931"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "EAN result.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/EanResult"
+                },
+                "example": {
+                  "input": "4006381333931",
+                  "normalized": "4006381333931",
+                  "valid": true
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "`value` is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "value query parameter is required"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/postcode": {
       "get": {
-        "summary": "Validate postcode",
+        "operationId": "validatePostcode",
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Validate a postcode format by country",
+        "description": "Checks a postal code against the official format for 24 countries and normalises it (GB gets the standard space). This is a format check, not an address-database lookup.",
         "parameters": [
           {
             "name": "value",
             "in": "query",
             "required": true,
-            "description": "Postcode",
+            "description": "Postal code, any case. Max 64 characters; surrounding whitespace is ignored.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
-            "example": "SW1A 1AA"
+            "example": "sw1a1aa"
           },
           {
             "name": "country",
             "in": "query",
             "required": true,
-            "description": "ISO country (GB, US, CA, DE, FR...)",
+            "description": "ISO 3166-1 alpha-2 country code (case-insensitive).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "AT",
+                "AU",
+                "BE",
+                "BR",
+                "CA",
+                "CH",
+                "DE",
+                "DK",
+                "ES",
+                "FR",
+                "GB",
+                "IE",
+                "IN",
+                "IT",
+                "JP",
+                "MX",
+                "NL",
+                "NO",
+                "NZ",
+                "PL",
+                "PT",
+                "SE",
+                "US",
+                "ZA"
+              ]
             },
             "example": "GB"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Postcode result.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/PostcodeResult"
+                },
+                "example": {
+                  "country": "GB",
+                  "input": "sw1a1aa",
+                  "normalized": "SW1A 1AA",
+                  "valid": true
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "`value` missing or unsupported country.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "country must be one of AT, AU, BE, BR, CA, CH, DE, DK, ES, FR, GB, IE, IN, IT, JP, MX, NL, NO, NZ, PL, PT, SE, US, ZA"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -230,7 +514,7 @@
         "tags": [
           "MCP"
         ],
-        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing ValidKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "description": "Model Context Protocol (MCP) server for ValidKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"validkit\": {\n      \"url\": \"https://validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"validkit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: validkit-iban-vat-card-isbn-bic-postcode-validator.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
         "requestBody": {
           "required": true,
           "content": {
@@ -270,6 +554,296 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "IbanResult": {
+        "type": "object",
+        "description": "IBAN validation result.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Value as received (trimmed, max 64 characters)."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Passes all format and checksum rules."
+          },
+          "normalized": {
+            "type": "string",
+            "description": "Compact canonical form (spaces, dashes and dots removed, upper-cased). Only when valid."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why validation failed. Only when invalid.",
+            "enum": [
+              "invalid checksum",
+              "invalid format",
+              "invalid length",
+              "invalid component"
+            ]
+          },
+          "formatted": {
+            "type": "string",
+            "description": "Printed format in groups of four."
+          },
+          "country": {
+            "type": "string",
+            "description": "ISO country code from the IBAN."
+          },
+          "bank_code_hint": {
+            "type": "string",
+            "description": "Characters 5-8 of the IBAN, which hold the bank or sort-code prefix in most countries (e.g. WEST)."
+          }
+        }
+      },
+      "VatResult": {
+        "type": "object",
+        "description": "EU VAT number validation result.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Value as received (trimmed, max 64 characters)."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Passes all format and checksum rules."
+          },
+          "normalized": {
+            "type": "string",
+            "description": "Compact canonical form (spaces, dashes and dots removed, upper-cased). Only when valid."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why validation failed. Only when invalid.",
+            "enum": [
+              "invalid checksum",
+              "invalid format",
+              "invalid length",
+              "invalid component"
+            ]
+          },
+          "formatted": {
+            "type": "string",
+            "description": "Normalised VAT number."
+          },
+          "country": {
+            "type": "string",
+            "description": "Member-state code (EL is reported as GR; XI is Northern Ireland)."
+          },
+          "note": {
+            "type": "string",
+            "description": "Reminder that this is a format/checksum check, not a live VIES registration lookup."
+          }
+        }
+      },
+      "CardResult": {
+        "type": "object",
+        "description": "Card number check. The full card number is never echoed back.",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "Digits pass the Luhn checksum, length is 12-19 and the number matches a known brand pattern."
+          },
+          "luhn_valid": {
+            "type": "boolean",
+            "description": "Luhn (mod 10) checksum passes."
+          },
+          "brand": {
+            "type": "string",
+            "description": "Detected card brand from the IIN prefix.",
+            "nullable": true,
+            "enum": [
+              "amex",
+              "visa",
+              "mastercard",
+              "discover",
+              "diners",
+              "jcb",
+              "unionpay",
+              "maestro"
+            ]
+          },
+          "length": {
+            "type": "integer",
+            "description": "Number of digits after removing spaces and dashes."
+          },
+          "masked": {
+            "type": "string",
+            "description": "First 6 and last 4 digits with the rest masked, safe to log.",
+            "nullable": true
+          }
+        }
+      },
+      "IsbnResult": {
+        "type": "object",
+        "description": "ISBN validation result.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Value as received (trimmed, max 64 characters)."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Passes all format and checksum rules."
+          },
+          "normalized": {
+            "type": "string",
+            "description": "Compact canonical form (spaces, dashes and dots removed, upper-cased). Only when valid."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why validation failed. Only when invalid.",
+            "enum": [
+              "invalid checksum",
+              "invalid format",
+              "invalid length",
+              "invalid component"
+            ]
+          },
+          "isbn13": {
+            "type": "string",
+            "description": "ISBN-13 equivalent."
+          },
+          "formatted": {
+            "type": "string",
+            "description": "Hyphenated form with registration-group and publisher split."
+          }
+        }
+      },
+      "BicResult": {
+        "type": "object",
+        "description": "BIC/SWIFT validation result.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Value as received (trimmed, max 64 characters)."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Passes all format and checksum rules."
+          },
+          "normalized": {
+            "type": "string",
+            "description": "Compact canonical form (spaces, dashes and dots removed, upper-cased). Only when valid."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why validation failed. Only when invalid.",
+            "enum": [
+              "invalid checksum",
+              "invalid format",
+              "invalid length",
+              "invalid component"
+            ]
+          },
+          "bank": {
+            "type": "string",
+            "description": "4-letter institution code."
+          },
+          "country": {
+            "type": "string",
+            "description": "2-letter country code."
+          }
+        }
+      },
+      "EanResult": {
+        "type": "object",
+        "description": "EAN/GTIN validation result.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Value as received (trimmed, max 64 characters)."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Passes all format and checksum rules."
+          },
+          "normalized": {
+            "type": "string",
+            "description": "Compact canonical form (spaces, dashes and dots removed, upper-cased). Only when valid."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why validation failed. Only when invalid.",
+            "enum": [
+              "invalid checksum",
+              "invalid format",
+              "invalid length",
+              "invalid component"
+            ]
+          }
+        }
+      },
+      "PostcodeResult": {
+        "type": "object",
+        "description": "Postcode format check.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Value as received."
+          },
+          "country": {
+            "type": "string",
+            "description": "Country code used."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Matches the country's postcode format."
+          },
+          "normalized": {
+            "type": "string",
+            "description": "Upper-cased postcode; GB postcodes get the standard space before the inward code. Null when invalid.",
+            "nullable": true
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
           }
         }
       }
