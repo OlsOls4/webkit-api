@@ -2,55 +2,121 @@
   "openapi": "3.0.0",
   "info": {
     "title": "QRKit - QR Code & Barcode Generator",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "description": "# QRKit: QR Code and Barcode Generator\n\nGenerate crisp QR codes (URL/text, Wi-Fi, vCard) and 1D barcodes (EAN, UPC, Code 128 and more) as PNG, scalable SVG or base64 JSON with one GET request. Responses are images you can drop straight into an `<img src>`.\n\n**Who it's for:** e-commerce, ticketing, restaurant menus, marketing, inventory and label printing, and any no-code tool that needs an image URL.\n\n## Use cases\n- Put a QR code linking to an order or ticket on emails and PDFs.\n- Print Wi-Fi QR codes for cafés, offices and Airbnb guests.\n- Add vCard QR codes to business cards and email signatures.\n- Generate EAN-13/UPC-A barcodes for product labels and ISBN barcodes for books.\n- Embed SVG codes in print artwork at any size without blurring.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://qrkit-qr-code-barcode-generator.p.rapidapi.com/qr?text=https%3A%2F%2Fexample.com&size=300&format=png' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: qrkit-qr-code-barcode-generator.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`qrkit-qr-code-barcode-generator.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Images are returned as binary by default; use `format=base64` to receive JSON with a data URI instead.\n- Image responses are cacheable for 24 hours (`Cache-Control: public, max-age=86400`).\n- Hex colours are given without `#` (or URL-encode it as `%23`).\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `422` missing or invalid parameter. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- QR encoding by the open-source segno library; barcodes by python-barcode.\n- QR Code is a registered trademark of DENSO WAVE INCORPORATED.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
   },
   "servers": [
     {
       "url": "https://webkit-api-1003933593053.us-central1.run.app/qrkit"
     }
   ],
+  "tags": [
+    {
+      "name": "QR codes",
+      "description": "QR codes for URLs and text, Wi-Fi credentials and vCard contacts."
+    },
+    {
+      "name": "Barcodes",
+      "description": "1D barcodes for retail, books and logistics."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
   "paths": {
     "/qr": {
       "get": {
-        "summary": "QR code",
+        "operationId": "generateQrCode",
+        "tags": [
+          "QR codes"
+        ],
+        "summary": "Generate a QR code",
+        "description": "Encodes any text or URL (up to 2000 characters) as a QR code. Choose PNG, SVG or base64 JSON, size, margin, error-correction level and colours, including transparent backgrounds.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Content to encode",
+            "description": "Content to encode: a URL, text, payment string and so on. Max 2000 characters. `data` is accepted as an alias.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 2000
             },
             "example": "https://example.com"
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "required": false,
-            "description": "Pixels 64-2000",
-            "schema": {
-              "type": "integer"
-            },
-            "example": 300
           },
           {
             "name": "format",
             "in": "query",
             "required": false,
-            "description": "png, svg or base64",
+            "description": "Output: `png` (binary image), `svg` (binary SVG) or `base64` (JSON with a data URI).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "png",
+                "svg",
+                "base64"
+              ],
+              "default": "png"
             },
             "example": "png"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Target image width in pixels (values outside 64-2000 are clamped). The QR is scaled by whole modules, so the actual size may be slightly smaller.",
+            "schema": {
+              "type": "integer",
+              "minimum": 64,
+              "maximum": 2000,
+              "default": 300
+            },
+            "example": 300
+          },
+          {
+            "name": "margin",
+            "in": "query",
+            "required": false,
+            "description": "Quiet zone width in modules (0-20, clamped). 4 is the QR standard.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "default": 4
+            },
+            "example": 4
+          },
+          {
+            "name": "ecc",
+            "in": "query",
+            "required": false,
+            "description": "Error-correction level: L (~7%), M (~15%), Q (~25%), H (~30%). Use H if you overlay a logo.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "L",
+                "M",
+                "Q",
+                "H"
+              ],
+              "default": "M"
+            },
+            "example": "M"
           },
           {
             "name": "color",
             "in": "query",
             "required": false,
-            "description": "Hex foreground",
+            "description": "Foreground (dark module) colour as 3- or 6-digit hex without `#`, or `transparent`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^(#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|transparent)$",
+              "default": "000000"
             },
             "example": "000000"
           },
@@ -58,57 +124,84 @@
             "name": "bg",
             "in": "query",
             "required": false,
-            "description": "Hex background or transparent",
+            "description": "Background colour as 3- or 6-digit hex without `#`, or `transparent`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^(#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|transparent)$",
+              "default": "ffffff"
             },
             "example": "ffffff"
           },
           {
-            "name": "ecc",
+            "name": "image",
             "in": "query",
             "required": false,
-            "description": "L, M, Q or H",
+            "description": "Only with `format=base64`: encode the data URI as `png` or `svg`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "png",
+                "svg"
+              ],
+              "default": "png"
             },
-            "example": "M"
-          },
-          {
-            "name": "margin",
-            "in": "query",
-            "required": false,
-            "description": "Quiet zone modules 0-20",
-            "schema": {
-              "type": "integer"
-            },
-            "example": 4
+            "example": "png"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "The QR code. PNG or SVG bytes by default (cached for 24 h via Cache-Control), or JSON when `format=base64`.",
             "content": {
               "image/png": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
                 }
+              },
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBase64"
+                },
+                "example": {
+                  "data_uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGMAAABjAQAAAACnQIM4AAAA50...",
+                  "format": "png",
+                  "mime": "image/png"
+                }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/qr/wifi": {
       "get": {
-        "summary": "Wi-Fi QR code",
+        "operationId": "generateWifiQrCode",
+        "tags": [
+          "QR codes"
+        ],
+        "summary": "Generate a Wi-Fi network QR code",
+        "description": "Builds a standard `WIFI:` QR payload that phones scan to join a network without typing the password. Special characters in the SSID and password are escaped for you. Accepts all styling options of /qr.",
         "parameters": [
           {
             "name": "ssid",
             "in": "query",
             "required": true,
-            "description": "Network name",
+            "description": "Network name (SSID).",
             "schema": {
               "type": "string"
             },
@@ -118,7 +211,7 @@
             "name": "password",
             "in": "query",
             "required": false,
-            "description": "Password",
+            "description": "Network password. Ignored when `security=nopass`.",
             "schema": {
               "type": "string"
             },
@@ -128,47 +221,186 @@
             "name": "security",
             "in": "query",
             "required": false,
-            "description": "WPA, WEP or nopass",
+            "description": "Encryption type. Case-insensitive.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "WPA",
+                "WEP",
+                "nopass"
+              ],
+              "default": "WPA"
             },
             "example": "WPA"
+          },
+          {
+            "name": "hidden",
+            "in": "query",
+            "required": false,
+            "description": "Set to `true` if the network does not broadcast its SSID.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "false"
+            },
+            "example": "false"
           },
           {
             "name": "format",
             "in": "query",
             "required": false,
-            "description": "png, svg or base64",
+            "description": "Output: `png` (binary image), `svg` (binary SVG) or `base64` (JSON with a data URI).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "png",
+                "svg",
+                "base64"
+              ],
+              "default": "png"
+            },
+            "example": "png"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Target image width in pixels (values outside 64-2000 are clamped). The QR is scaled by whole modules, so the actual size may be slightly smaller.",
+            "schema": {
+              "type": "integer",
+              "minimum": 64,
+              "maximum": 2000,
+              "default": 300
+            },
+            "example": 300
+          },
+          {
+            "name": "margin",
+            "in": "query",
+            "required": false,
+            "description": "Quiet zone width in modules (0-20, clamped). 4 is the QR standard.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "default": 4
+            },
+            "example": 4
+          },
+          {
+            "name": "ecc",
+            "in": "query",
+            "required": false,
+            "description": "Error-correction level: L (~7%), M (~15%), Q (~25%), H (~30%). Use H if you overlay a logo.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "L",
+                "M",
+                "Q",
+                "H"
+              ],
+              "default": "M"
+            },
+            "example": "M"
+          },
+          {
+            "name": "color",
+            "in": "query",
+            "required": false,
+            "description": "Foreground (dark module) colour as 3- or 6-digit hex without `#`, or `transparent`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|transparent)$",
+              "default": "000000"
+            },
+            "example": "000000"
+          },
+          {
+            "name": "bg",
+            "in": "query",
+            "required": false,
+            "description": "Background colour as 3- or 6-digit hex without `#`, or `transparent`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|transparent)$",
+              "default": "ffffff"
+            },
+            "example": "ffffff"
+          },
+          {
+            "name": "image",
+            "in": "query",
+            "required": false,
+            "description": "Only with `format=base64`: encode the data URI as `png` or `svg`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "png",
+                "svg"
+              ],
+              "default": "png"
             },
             "example": "png"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "The Wi-Fi QR code. PNG or SVG bytes by default (cached for 24 h via Cache-Control), or JSON when `format=base64`.",
             "content": {
               "image/png": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
                 }
+              },
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBase64"
+                },
+                "example": {
+                  "data_uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGMAAABjAQAAAACnQIM4AAAA50...",
+                  "format": "png",
+                  "mime": "image/png"
+                }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/qr/vcard": {
       "get": {
-        "summary": "Contact (vCard) QR code",
+        "operationId": "generateVcardQrCode",
+        "tags": [
+          "QR codes"
+        ],
+        "summary": "Generate a contact (vCard) QR code",
+        "description": "Builds a vCard 3.0 contact and encodes it as a QR code; scanning it offers to save the contact. Only `name` is required. Accepts all styling options of /qr.",
         "parameters": [
           {
             "name": "name",
             "in": "query",
             "required": true,
-            "description": "Full name",
+            "description": "Full name of the contact.",
             "schema": {
               "type": "string"
             },
@@ -178,7 +410,7 @@
             "name": "phone",
             "in": "query",
             "required": false,
-            "description": "Phone",
+            "description": "Phone number.",
             "schema": {
               "type": "string"
             },
@@ -188,9 +420,10 @@
             "name": "email",
             "in": "query",
             "required": false,
-            "description": "Email",
+            "description": "Email address.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "email"
             },
             "example": "jane@example.com"
           },
@@ -198,57 +431,199 @@
             "name": "org",
             "in": "query",
             "required": false,
-            "description": "Company",
+            "description": "Company or organisation.",
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "Acme Ltd"
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "required": false,
+            "description": "Job title.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Head of Sales"
           },
           {
             "name": "url",
             "in": "query",
             "required": false,
-            "description": "Website",
+            "description": "Website URL.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://example.com"
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "description": "Postal address as a single line.",
             "schema": {
               "type": "string"
-            }
+            },
+            "example": "1 Main Street, Bristol, BS1 1AA"
           },
           {
             "name": "format",
             "in": "query",
             "required": false,
-            "description": "png, svg or base64",
+            "description": "Output: `png` (binary image), `svg` (binary SVG) or `base64` (JSON with a data URI).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "png",
+                "svg",
+                "base64"
+              ],
+              "default": "png"
+            },
+            "example": "png"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Target image width in pixels (values outside 64-2000 are clamped). The QR is scaled by whole modules, so the actual size may be slightly smaller.",
+            "schema": {
+              "type": "integer",
+              "minimum": 64,
+              "maximum": 2000,
+              "default": 300
+            },
+            "example": 300
+          },
+          {
+            "name": "margin",
+            "in": "query",
+            "required": false,
+            "description": "Quiet zone width in modules (0-20, clamped). 4 is the QR standard.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "default": 4
+            },
+            "example": 4
+          },
+          {
+            "name": "ecc",
+            "in": "query",
+            "required": false,
+            "description": "Error-correction level: L (~7%), M (~15%), Q (~25%), H (~30%). Use H if you overlay a logo.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "L",
+                "M",
+                "Q",
+                "H"
+              ],
+              "default": "M"
+            },
+            "example": "M"
+          },
+          {
+            "name": "color",
+            "in": "query",
+            "required": false,
+            "description": "Foreground (dark module) colour as 3- or 6-digit hex without `#`, or `transparent`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|transparent)$",
+              "default": "000000"
+            },
+            "example": "000000"
+          },
+          {
+            "name": "bg",
+            "in": "query",
+            "required": false,
+            "description": "Background colour as 3- or 6-digit hex without `#`, or `transparent`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})|transparent)$",
+              "default": "ffffff"
+            },
+            "example": "ffffff"
+          },
+          {
+            "name": "image",
+            "in": "query",
+            "required": false,
+            "description": "Only with `format=base64`: encode the data URI as `png` or `svg`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "png",
+                "svg"
+              ],
+              "default": "png"
             },
             "example": "png"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "The vCard QR code. PNG or SVG bytes by default (cached for 24 h via Cache-Control), or JSON when `format=base64`.",
             "content": {
               "image/png": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
                 }
+              },
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBase64"
+                },
+                "example": {
+                  "data_uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGMAAABjAQAAAACnQIM4AAAA50...",
+                  "format": "png",
+                  "mime": "image/png"
+                }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/barcode": {
       "get": {
-        "summary": "Barcode",
+        "operationId": "generateBarcode",
+        "tags": [
+          "Barcodes"
+        ],
+        "summary": "Generate a 1D barcode",
+        "description": "Generates retail and logistics barcodes: Code 128, Code 39, EAN-13, EAN-8, UPC-A, ISBN-13, ISSN, ITF and PZN. Check digits are calculated for you: send 12 digits for EAN-13 (if you send 13, the last digit is recalculated, so a wrong check digit is silently corrected). Returns `422` with the reason when the data does not fit the symbology.",
         "parameters": [
           {
             "name": "text",
             "in": "query",
             "required": true,
-            "description": "Data",
+            "description": "Data to encode, max 80 characters. Must suit the type (EAN-13: 12 or 13 digits, EAN-8: 7 or 8, UPC-A: 11 or 12). `data` is accepted as an alias.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 80
             },
             "example": "590123412345"
           },
@@ -256,9 +631,21 @@
             "name": "type",
             "in": "query",
             "required": false,
-            "description": "code128, code39, ean13, ean8, upca, isbn13, issn, itf, pzn",
+            "description": "Barcode symbology.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "code128",
+                "code39",
+                "ean13",
+                "ean8",
+                "upca",
+                "isbn13",
+                "issn",
+                "itf",
+                "pzn"
+              ],
+              "default": "code128"
             },
             "example": "ean13"
           },
@@ -266,9 +653,15 @@
             "name": "format",
             "in": "query",
             "required": false,
-            "description": "png, svg or base64",
+            "description": "Output: `png`, `svg` or `base64` (JSON with a data URI).",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "png",
+                "svg",
+                "base64"
+              ],
+              "default": "png"
             },
             "example": "png"
           },
@@ -276,24 +669,79 @@
             "name": "show_text",
             "in": "query",
             "required": false,
-            "description": "true/false",
+            "description": "Print the human-readable digits under the bars. Any value other than `false` means true.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "true"
             },
             "example": "true"
+          },
+          {
+            "name": "image",
+            "in": "query",
+            "required": false,
+            "description": "Only with `format=base64`: encode the data URI as `png` or `svg`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "png",
+                "svg"
+              ],
+              "default": "png"
+            },
+            "example": "png"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "The barcode. PNG or SVG bytes by default (cached for 24 h via Cache-Control), or JSON when `format=base64`.",
             "content": {
               "image/png": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
                 }
+              },
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageBase64"
+                },
+                "example": {
+                  "data_uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAdAAAAEYCAIAAABjhDCOAAAVMk...",
+                  "format": "png",
+                  "mime": "image/png"
+                }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Invalid parameter or data that does not fit the barcode type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Invalid data for ean13: EAN must have 12 digits, not 2."
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -305,7 +753,7 @@
         "tags": [
           "MCP"
         ],
-        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing QRKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "description": "Model Context Protocol (MCP) server for QRKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://qrkit-qr-code-barcode-generator.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: qrkit-qr-code-barcode-generator.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"qrkit\": {\n      \"url\": \"https://qrkit-qr-code-barcode-generator.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"qrkit-qr-code-barcode-generator.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"qrkit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://qrkit-qr-code-barcode-generator.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:qrkit-qr-code-barcode-generator.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://qrkit-qr-code-barcode-generator.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: qrkit-qr-code-barcode-generator.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
         "requestBody": {
           "required": true,
           "content": {
@@ -345,6 +793,94 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "ImageBase64": {
+        "type": "object",
+        "description": "Returned when `format=base64`.",
+        "properties": {
+          "format": {
+            "type": "string",
+            "description": "Image format inside the data URI.",
+            "enum": [
+              "png",
+              "svg"
+            ]
+          },
+          "mime": {
+            "type": "string",
+            "description": "MIME type.",
+            "enum": [
+              "image/png",
+              "image/svg+xml"
+            ]
+          },
+          "data_uri": {
+            "type": "string",
+            "description": "`data:<mime>;base64,...` ready for an <img src>."
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Unprocessable: a required parameter is missing or a value is invalid. The `error` text says which.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "A required parameter is missing or invalid"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
           }
         }
       }
