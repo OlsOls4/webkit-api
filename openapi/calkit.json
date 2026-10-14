@@ -1,401 +1,452 @@
 {
- "openapi": "3.0.0",
- "info": {
-  "title": "CalKit - Public Holidays, Business Days & Timezone API (150+ countries)",
-  "version": "1.0.0"
- },
- "servers": [
-  {
-   "url": "https://webkit-api-1003933593053.us-central1.run.app/cal"
-  }
- ],
- "paths": {
-  "/holidays": {
-   "get": {
-    "summary": "Public holidays",
-    "parameters": [
-     {
-      "name": "country",
-      "in": "query",
-      "required": true,
-      "description": "ISO country code",
-      "schema": {
-       "type": "string"
-      },
-      "example": "GB"
-     },
-     {
-      "name": "year",
-      "in": "query",
-      "required": false,
-      "description": "Year",
-      "schema": {
-       "type": "integer"
-      },
-      "example": 2026
-     },
-     {
-      "name": "subdiv",
-      "in": "query",
-      "required": false,
-      "description": "Subdivision e.g. ENG, SCT, CA, NY",
-      "schema": {
-       "type": "string"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CalKit - Public Holidays, Business Days & Timezone API (150+ countries)",
+    "version": "1.0.0"
   },
-  "/is-holiday": {
-   "get": {
-    "summary": "Is it a holiday / business day?",
-    "parameters": [
-     {
-      "name": "date",
-      "in": "query",
-      "required": true,
-      "description": "YYYY-MM-DD",
-      "schema": {
-       "type": "string"
-      },
-      "example": "2026-12-25"
-     },
-     {
-      "name": "country",
-      "in": "query",
-      "required": true,
-      "description": "ISO country code",
-      "schema": {
-       "type": "string"
-      },
-      "example": "GB"
-     },
-     {
-      "name": "subdiv",
-      "in": "query",
-      "required": false,
-      "description": "Subdivision",
-      "schema": {
-       "type": "string"
-      }
-     },
-     {
-      "name": "weekend",
-      "in": "query",
-      "required": false,
-      "description": "Weekend days",
-      "schema": {
-       "type": "string"
-      },
-      "example": "sat,sun"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app/cal"
     }
-   }
-  },
-  "/next-holiday": {
-   "get": {
-    "summary": "Next holidays",
-    "parameters": [
-     {
-      "name": "country",
-      "in": "query",
-      "required": true,
-      "description": "ISO country code",
-      "schema": {
-       "type": "string"
-      },
-      "example": "US"
-     },
-     {
-      "name": "date",
-      "in": "query",
-      "required": false,
-      "description": "From date (default today)",
-      "schema": {
-       "type": "string"
-      }
-     },
-     {
-      "name": "count",
-      "in": "query",
-      "required": false,
-      "description": "How many",
-      "schema": {
-       "type": "integer"
-      },
-      "example": 3
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
+  ],
+  "paths": {
+    "/holidays": {
+      "get": {
+        "summary": "Public holidays",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "description": "ISO country code",
+            "schema": {
+              "type": "string"
+            },
+            "example": "GB"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "description": "Year",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 2026
+          },
+          {
+            "name": "subdiv",
+            "in": "query",
+            "required": false,
+            "description": "Subdivision e.g. ENG, SCT, CA, NY",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
-    }
-   }
-  },
-  "/business-days/add": {
-   "get": {
-    "summary": "Add business days",
-    "parameters": [
-     {
-      "name": "date",
-      "in": "query",
-      "required": true,
-      "description": "Start YYYY-MM-DD",
-      "schema": {
-       "type": "string"
-      },
-      "example": "2026-12-23"
-     },
-     {
-      "name": "days",
-      "in": "query",
-      "required": true,
-      "description": "Business days (negative to subtract)",
-      "schema": {
-       "type": "integer"
-      },
-      "example": 5
-     },
-     {
-      "name": "country",
-      "in": "query",
-      "required": true,
-      "description": "ISO country code",
-      "schema": {
-       "type": "string"
-      },
-      "example": "GB"
-     },
-     {
-      "name": "subdiv",
-      "in": "query",
-      "required": false,
-      "description": "Subdivision",
-      "schema": {
-       "type": "string"
-      }
-     },
-     {
-      "name": "weekend",
-      "in": "query",
-      "required": false,
-      "description": "Weekend days",
-      "schema": {
-       "type": "string"
-      },
-      "example": "sat,sun"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
     },
-    "description": "Delivery dates, SLAs, payment terms."
-   }
-  },
-  "/business-days/between": {
-   "get": {
-    "summary": "Business days between dates",
-    "parameters": [
-     {
-      "name": "start",
-      "in": "query",
-      "required": true,
-      "description": "YYYY-MM-DD",
-      "schema": {
-       "type": "string"
-      },
-      "example": "2026-12-01"
-     },
-     {
-      "name": "end",
-      "in": "query",
-      "required": true,
-      "description": "YYYY-MM-DD",
-      "schema": {
-       "type": "string"
-      },
-      "example": "2026-12-31"
-     },
-     {
-      "name": "country",
-      "in": "query",
-      "required": true,
-      "description": "ISO country code",
-      "schema": {
-       "type": "string"
-      },
-      "example": "GB"
-     },
-     {
-      "name": "subdiv",
-      "in": "query",
-      "required": false,
-      "description": "Subdivision",
-      "schema": {
-       "type": "string"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
+    "/is-holiday": {
+      "get": {
+        "summary": "Is it a holiday / business day?",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "description": "YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            },
+            "example": "2026-12-25"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "description": "ISO country code",
+            "schema": {
+              "type": "string"
+            },
+            "example": "GB"
+          },
+          {
+            "name": "subdiv",
+            "in": "query",
+            "required": false,
+            "description": "Subdivision",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "weekend",
+            "in": "query",
+            "required": false,
+            "description": "Weekend days",
+            "schema": {
+              "type": "string"
+            },
+            "example": "sat,sun"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
-    }
-   }
-  },
-  "/timezone": {
-   "get": {
-    "summary": "Timezone from coordinates",
-    "parameters": [
-     {
-      "name": "lat",
-      "in": "query",
-      "required": true,
-      "description": "Latitude",
-      "schema": {
-       "type": "number"
-      },
-      "example": 51.4545
-     },
-     {
-      "name": "lng",
-      "in": "query",
-      "required": true,
-      "description": "Longitude",
-      "schema": {
-       "type": "number"
-      },
-      "example": -2.5879
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
+    },
+    "/next-holiday": {
+      "get": {
+        "summary": "Next holidays",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "description": "ISO country code",
+            "schema": {
+              "type": "string"
+            },
+            "example": "US"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "description": "From date (default today)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": false,
+            "description": "How many",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
-    }
-   }
-  },
-  "/convert": {
-   "get": {
-    "summary": "Convert time between zones",
-    "parameters": [
-     {
-      "name": "time",
-      "in": "query",
-      "required": false,
-      "description": "ISO time",
-      "schema": {
-       "type": "string"
-      },
-      "example": "2026-10-14T09:30"
-     },
-     {
-      "name": "from",
-      "in": "query",
-      "required": true,
-      "description": "IANA zone",
-      "schema": {
-       "type": "string"
-      },
-      "example": "Europe/London"
-     },
-     {
-      "name": "to",
-      "in": "query",
-      "required": true,
-      "description": "IANA zone",
-      "schema": {
-       "type": "string"
-      },
-      "example": "America/New_York"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
+    },
+    "/business-days/add": {
+      "get": {
+        "summary": "Add business days",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "description": "Start YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            },
+            "example": "2026-12-23"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": true,
+            "description": "Business days (negative to subtract)",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 5
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "description": "ISO country code",
+            "schema": {
+              "type": "string"
+            },
+            "example": "GB"
+          },
+          {
+            "name": "subdiv",
+            "in": "query",
+            "required": false,
+            "description": "Subdivision",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "weekend",
+            "in": "query",
+            "required": false,
+            "description": "Weekend days",
+            "schema": {
+              "type": "string"
+            },
+            "example": "sat,sun"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delivery dates, SLAs, payment terms."
+      }
+    },
+    "/business-days/between": {
+      "get": {
+        "summary": "Business days between dates",
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "description": "YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            },
+            "example": "2026-12-01"
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "description": "YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            },
+            "example": "2026-12-31"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "description": "ISO country code",
+            "schema": {
+              "type": "string"
+            },
+            "example": "GB"
+          },
+          {
+            "name": "subdiv",
+            "in": "query",
+            "required": false,
+            "description": "Subdivision",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
-    }
-   }
-  },
-  "/countries": {
-   "get": {
-    "summary": "Supported countries & subdivisions",
-    "parameters": [],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
+    },
+    "/timezone": {
+      "get": {
+        "summary": "Timezone from coordinates",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "description": "Latitude",
+            "schema": {
+              "type": "number"
+            },
+            "example": 51.4545
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "description": "Longitude",
+            "schema": {
+              "type": "number"
+            },
+            "example": -2.5879
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
+    },
+    "/convert": {
+      "get": {
+        "summary": "Convert time between zones",
+        "parameters": [
+          {
+            "name": "time",
+            "in": "query",
+            "required": false,
+            "description": "ISO time",
+            "schema": {
+              "type": "string"
+            },
+            "example": "2026-10-14T09:30"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "description": "IANA zone",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Europe/London"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "description": "IANA zone",
+            "schema": {
+              "type": "string"
+            },
+            "example": "America/New_York"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/countries": {
+      "get": {
+        "summary": "Supported countries & subdivisions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (CalKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing CalKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
     }
-   }
   }
- }
 }
