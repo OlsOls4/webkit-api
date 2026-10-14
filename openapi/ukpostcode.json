@@ -1,0 +1,247 @@
+{
+ "openapi": "3.0.0",
+ "info": {
+  "title": "UK PostcodeKit - Postcode Lookup, Nearest, Autocomplete & Distance",
+  "version": "1.0.0"
+ },
+ "servers": [
+  {
+   "url": "https://webkit-api-1003933593053.us-central1.run.app/postcode"
+  }
+ ],
+ "paths": {
+  "/lookup": {
+   "get": {
+    "summary": "Postcode lookup",
+    "parameters": [
+     {
+      "name": "postcode",
+      "in": "query",
+      "required": true,
+      "description": "UK postcode",
+      "schema": {
+       "type": "string"
+      },
+      "example": "SW1A 1AA"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    },
+    "description": "Coordinates, country, county, district and ward (OS Code-Point Open, OGL)."
+   }
+  },
+  "/validate": {
+   "get": {
+    "summary": "Validate postcode",
+    "parameters": [
+     {
+      "name": "postcode",
+      "in": "query",
+      "required": true,
+      "description": "UK postcode",
+      "schema": {
+       "type": "string"
+      },
+      "example": "bs3 1dh"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/nearest": {
+   "get": {
+    "summary": "Nearest postcodes",
+    "parameters": [
+     {
+      "name": "postcode",
+      "in": "query",
+      "required": false,
+      "description": "UK postcode",
+      "schema": {
+       "type": "string"
+      },
+      "example": "EC1A 1BB"
+     },
+     {
+      "name": "lat",
+      "in": "query",
+      "required": false,
+      "description": "Latitude",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "lng",
+      "in": "query",
+      "required": false,
+      "description": "Longitude",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "radius",
+      "in": "query",
+      "required": false,
+      "description": "Metres (max 5000)",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 500
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "description": "Max results",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 10
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/autocomplete": {
+   "get": {
+    "summary": "Autocomplete",
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": true,
+      "description": "Partial postcode",
+      "schema": {
+       "type": "string"
+      },
+      "example": "SW1A 1"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "description": "Max results",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 10
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/distance": {
+   "get": {
+    "summary": "Distance between postcodes",
+    "parameters": [
+     {
+      "name": "from",
+      "in": "query",
+      "required": true,
+      "description": "Postcode",
+      "schema": {
+       "type": "string"
+      },
+      "example": "SW1A 1AA"
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": true,
+      "description": "Postcode",
+      "schema": {
+       "type": "string"
+      },
+      "example": "EH1 1YZ"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/outcode": {
+   "get": {
+    "summary": "Outcode summary",
+    "parameters": [
+     {
+      "name": "outcode",
+      "in": "query",
+      "required": true,
+      "description": "Outcode",
+      "schema": {
+       "type": "string"
+      },
+      "example": "BS3"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}
