@@ -1,0 +1,111 @@
+{
+ "openapi": "3.0.0",
+ "info": {
+  "title": "WebKit - Email Validator, Link Preview & Article Extractor",
+  "version": "1.0.0"
+ },
+ "servers": [
+  {
+   "url": "https://webkit-api-1003933593053.us-central1.run.app"
+  }
+ ],
+ "paths": {
+  "/email/validate": {
+   "get": {
+    "summary": "Validate email",
+    "parameters": [
+     {
+      "name": "email",
+      "in": "query",
+      "required": true,
+      "description": "Email address to check",
+      "schema": {
+       "type": "string"
+      },
+      "example": "test@gmail.com"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/url/preview": {
+   "get": {
+    "summary": "Link preview",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Page URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://www.bbc.co.uk/news"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/url/extract": {
+   "get": {
+    "summary": "Extract article",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Article URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://en.wikipedia.org/wiki/Bristol"
+     },
+     {
+      "name": "max_chars",
+      "in": "query",
+      "required": false,
+      "description": "500-100000, default 20000",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 20000
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}
