@@ -1,2 +1,4 @@
 *.mmdb
 __pycache__/
+ukpostcode/postcodes.sqlite
+llmkit/tiktoken_cache/
