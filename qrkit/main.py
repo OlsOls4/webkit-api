@@ -80,7 +80,10 @@ def bar(a):
 
 @functions_framework.http
 def handler(request):
-    path, a = request.path.rstrip("/") or "/", request.args.to_dict()
+    return dispatch(request, request.path)
+
+def dispatch(request, path):
+    path, a = path.rstrip("/") or "/", request.args.to_dict()
     try:
         if path in ("/", "/health"): return jsonify(status="ok")
         if PROXY_SECRET and request.headers.get("X-RapidAPI-Proxy-Secret") != PROXY_SECRET:
