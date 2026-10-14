@@ -2,66 +2,122 @@
   "openapi": "3.0.0",
   "info": {
     "title": "UK PostcodeKit - Postcode Lookup, Nearest, Autocomplete & Distance",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "description": "# UK PostcodeKit: Postcode Lookup, Nearest, Autocomplete and Distance\n\nFast UK postcode data for Great Britain (England, Scotland and Wales): coordinates, county, district and ward with ONS codes, validation, type-ahead autocomplete, nearest-postcode search and distances. Served from a local copy of Ordnance Survey Code-Point Open, so responses take milliseconds.\n\n**Who it's for:** UK e-commerce checkouts, delivery and logistics, property and local-services apps, store locators, councils and data teams.\n\n## Use cases\n- Validate and format postcodes in checkout and signup forms.\n- Power postcode type-ahead in address forms.\n- Find stores, branches or tradespeople nearest a customer's postcode.\n- Quote delivery zones from postcode-to-postcode distance.\n- Enrich customer records with district, ward and ONS codes for reporting.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com/lookup?postcode=SW1A%201AA' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Coverage is Great Britain. Northern Ireland and Channel Islands/Isle of Man postcodes are not included and return 404 on lookup.\n- Coordinates are postcode centroids (WGS84). Distances are straight-line, not routes.\n- Responses that carry OS data include an `attribution` field; the Open Government Licence requires you to show it.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `404` not found, `422` missing or invalid parameter, `503` temporarily unavailable, retry shortly. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Contains OS data © Crown copyright and database right 2026. Contains Royal Mail data © Royal Mail copyright and database right 2026. Source: Ordnance Survey Code-Point Open, licensed under the Open Government Licence v3.0 (https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
   },
   "servers": [
     {
       "url": "https://webkit-api-1003933593053.us-central1.run.app/postcode"
     }
   ],
+  "tags": [
+    {
+      "name": "Postcodes",
+      "description": "Lookup, validation, autocomplete and outcode summaries."
+    },
+    {
+      "name": "Geo search",
+      "description": "Nearest postcodes and distances."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
   "paths": {
     "/lookup": {
       "get": {
-        "summary": "Postcode lookup",
+        "operationId": "lookupPostcode",
+        "tags": [
+          "Postcodes"
+        ],
+        "summary": "Look up a UK postcode",
+        "description": "Returns coordinates, positional quality, country, county, district, ward and their ONS codes for a postcode in Great Britain.",
         "parameters": [
           {
             "name": "postcode",
             "in": "query",
             "required": true,
-            "description": "UK postcode",
+            "description": "UK postcode, any case, with or without the space.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 10
             },
             "example": "SW1A 1AA"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Postcode details.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/PostcodeDetail"
+                },
+                "example": {
+                  "area": "SW",
+                  "attribution": "Contains OS data © Crown copyright and database right 2026. Contains Royal Mail data © Royal Mail copyright and database right 2026. Licensed under the Open Government Licence v3.0.",
+                  "country": "England",
+                  "county": null,
+                  "district": "City of Westminster London Borough",
+                  "district_code": "E09000033",
+                  "incode": "1AA",
+                  "latitude": 51.501009,
+                  "longitude": -0.141588,
+                  "outcode": "SW1A",
+                  "positional_quality": 10,
+                  "postcode": "SW1A 1AA",
+                  "ward": "St. James's",
+                  "ward_code": "E05013806"
                 }
               }
             }
-          }
-        },
-        "description": "Coordinates, country, county, district and ward (OS Code-Point Open, OGL)."
-      }
-    },
-    "/validate": {
-      "get": {
-        "summary": "Validate postcode",
-        "parameters": [
-          {
-            "name": "postcode",
-            "in": "query",
-            "required": true,
-            "description": "UK postcode",
-            "schema": {
-              "type": "string"
-            },
-            "example": "bs3 1dh"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Postcode not found (terminated, or outside Great Britain).",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Postcode not found (it may be terminated, or a Northern Ireland/Channel Islands postcode not covered)"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a valid UK postcode format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Not a valid UK postcode format"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Postcode database briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Postcode database unavailable"
                 }
               }
             }
@@ -69,17 +125,73 @@
         }
       }
     },
+    "/validate": {
+      "get": {
+        "operationId": "validateUkPostcode",
+        "tags": [
+          "Postcodes"
+        ],
+        "summary": "Validate a UK postcode",
+        "description": "Checks the postcode format and whether it exists in the current database, and returns the normalised form. Never errors on bad input: check `valid_format` and `exists`.",
+        "parameters": [
+          {
+            "name": "postcode",
+            "in": "query",
+            "required": true,
+            "description": "UK postcode, any case, with or without the space.",
+            "schema": {
+              "type": "string",
+              "maxLength": 10
+            },
+            "example": "bs3 1dh"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostcodeValidation"
+                },
+                "example": {
+                  "exists": true,
+                  "input": "bs3 1dh",
+                  "normalized": "BS3 1DH",
+                  "valid_format": true
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
     "/nearest": {
       "get": {
-        "summary": "Nearest postcodes",
+        "operationId": "findNearestPostcodes",
+        "tags": [
+          "Geo search"
+        ],
+        "summary": "Find the nearest postcodes",
+        "description": "Finds postcodes within a radius of a postcode or a latitude/longitude, nearest first, with distances in metres. Give `postcode`, or both `lat` and `lng`.",
         "parameters": [
           {
             "name": "postcode",
             "in": "query",
             "required": false,
-            "description": "UK postcode",
+            "description": "Centre postcode. Takes priority over lat/lng.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 10
             },
             "example": "EC1A 1BB"
           },
@@ -87,66 +199,170 @@
             "name": "lat",
             "in": "query",
             "required": false,
-            "description": "Latitude",
+            "description": "Centre latitude (WGS84), used when no postcode is given. Great Britain spans roughly 49.9 to 60.9.",
             "schema": {
-              "type": "string"
-            }
+              "type": "number",
+              "format": "double"
+            },
+            "example": 51.5246
           },
           {
             "name": "lng",
             "in": "query",
             "required": false,
-            "description": "Longitude",
+            "description": "Centre longitude (WGS84), used when no postcode is given. Great Britain spans roughly -8.7 to 1.8.",
             "schema": {
-              "type": "string"
-            }
+              "type": "number",
+              "format": "double"
+            },
+            "example": -0.112
           },
           {
             "name": "radius",
             "in": "query",
             "required": false,
-            "description": "Metres (max 5000)",
+            "description": "Search radius in metres (clamped to 10-5000).",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 5000,
+              "default": 500
             },
-            "example": 500
+            "example": 200
           },
           {
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Max results",
+            "description": "Maximum results (clamped to 1-100).",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
             },
-            "example": 10
+            "example": 3
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Nearby postcodes.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/NearestResult"
+                },
+                "example": {
+                  "attribution": "Contains OS data © Crown copyright and database right 2026. Contains Royal Mail data © Royal Mail copyright and database right 2026. Licensed under the Open Government Licence v3.0.",
+                  "latitude": 51.524565,
+                  "longitude": -0.112042,
+                  "radius_m": 200,
+                  "results": [
+                    {
+                      "area": "EC",
+                      "country": "England",
+                      "county": null,
+                      "distance_m": 0,
+                      "district": "Islington London Borough",
+                      "district_code": "E09000019",
+                      "incode": "1AH",
+                      "latitude": 51.524565,
+                      "longitude": -0.112042,
+                      "outcode": "EC1A",
+                      "positional_quality": 10,
+                      "postcode": "EC1A 1AH",
+                      "ward": "Clerkenwell",
+                      "ward_code": "E05013702"
+                    },
+                    {
+                      "area": "EC",
+                      "country": "England",
+                      "county": null,
+                      "distance_m": 0,
+                      "district": "Islington London Borough",
+                      "district_code": "E09000019",
+                      "incode": "1BB",
+                      "latitude": 51.524565,
+                      "longitude": -0.112042,
+                      "outcode": "EC1A",
+                      "positional_quality": 10,
+                      "postcode": "EC1A 1BB",
+                      "ward": "Clerkenwell",
+                      "ward_code": "E05013702"
+                    },
+                    {
+                      "area": "EC",
+                      "country": "England",
+                      "county": null,
+                      "distance_m": 0,
+                      "district": "Islington London Borough",
+                      "district_code": "E09000019",
+                      "incode": "1DN",
+                      "latitude": 51.524565,
+                      "longitude": -0.112042,
+                      "outcode": "EC1A",
+                      "positional_quality": 10,
+                      "postcode": "EC1A 1DN",
+                      "ward": "Clerkenwell",
+                      "ward_code": "E05013702"
+                    }
+                  ]
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Centre postcode not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Postcode not found (it may be terminated, or a Northern Ireland/Channel Islands postcode not covered)"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Neither a postcode nor lat and lng, or a non-integer radius/limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "postcode, or lat and lng, is required"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/autocomplete": {
       "get": {
-        "summary": "Autocomplete",
+        "operationId": "autocompletePostcode",
+        "tags": [
+          "Postcodes"
+        ],
+        "summary": "Autocomplete a partial postcode",
+        "description": "Returns postcodes that start with the characters typed so far (spaces ignored), in alphabetical order. Built for address-form type-ahead.",
         "parameters": [
           {
             "name": "q",
             "in": "query",
             "required": true,
-            "description": "Partial postcode",
+            "description": "Partial postcode, at least 2 letters/digits (spaces ignored). `postcode` is accepted as an alias.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 2
             },
             "example": "SW1A 1"
           },
@@ -154,38 +370,76 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Max results",
+            "description": "Maximum suggestions (1-50).",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
             },
-            "example": 10
+            "example": 5
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Suggestions.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/AutocompleteResult"
+                },
+                "example": {
+                  "query": "SW1A 1",
+                  "results": [
+                    "SW1A 1AA",
+                    "SW1A 1AB",
+                    "SW1A 1AG",
+                    "SW1A 1AH",
+                    "SW1A 1BA"
+                  ]
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "q shorter than 2 characters or contains invalid characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "q must be at least 2 characters of a postcode"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/distance": {
       "get": {
-        "summary": "Distance between postcodes",
+        "operationId": "getPostcodeDistance",
+        "tags": [
+          "Geo search"
+        ],
+        "summary": "Distance between two UK postcodes",
+        "description": "Straight-line (great-circle) distance between two postcodes in kilometres and miles. Not a driving distance.",
         "parameters": [
           {
             "name": "from",
             "in": "query",
             "required": true,
-            "description": "Postcode",
+            "description": "First postcode.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 10
             },
             "example": "SW1A 1AA"
           },
@@ -193,20 +447,73 @@
             "name": "to",
             "in": "query",
             "required": true,
-            "description": "Postcode",
+            "description": "Second postcode.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 10
             },
             "example": "EH1 1YZ"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Distance.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/DistanceResult"
+                },
+                "example": {
+                  "distance_km": 533.79,
+                  "distance_miles": 331.682,
+                  "from": "SW1A 1AA",
+                  "note": "Straight-line (great-circle) distance",
+                  "to": "EH1 1YZ"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Postcode not found (terminated, or outside Great Britain).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Postcode not found (it may be terminated, or a Northern Ireland/Channel Islands postcode not covered)"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a valid UK postcode format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Not a valid UK postcode format"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Postcode database briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Postcode database unavailable"
                 }
               }
             }
@@ -216,29 +523,78 @@
     },
     "/outcode": {
       "get": {
-        "summary": "Outcode summary",
+        "operationId": "getOutcode",
+        "tags": [
+          "Postcodes"
+        ],
+        "summary": "Summarise a postcode district (outcode)",
+        "description": "For an outward code such as BS3 or SW1A, returns the number of postcodes with coordinates, the centroid and the local authority districts it covers.",
         "parameters": [
           {
             "name": "outcode",
             "in": "query",
             "required": true,
-            "description": "Outcode",
+            "description": "Outward code (the part before the space), e.g. BS3, SW1A, M1.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[A-Za-z]{1,2}[0-9][A-Za-z0-9]?$"
             },
             "example": "BS3"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Outcode summary.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/OutcodeResult"
+                },
+                "example": {
+                  "attribution": "Contains OS data © Crown copyright and database right 2026. Contains Royal Mail data © Royal Mail copyright and database right 2026. Licensed under the Open Government Licence v3.0.",
+                  "districts": [
+                    "City of Bristol",
+                    "North Somerset"
+                  ],
+                  "latitude": 51.438677,
+                  "longitude": -2.603191,
+                  "outcode": "BS3",
+                  "postcodes": 979
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Outcode not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Outcode not found"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a valid outcode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "outcode must look like BS3 or SW1A"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -250,7 +606,7 @@
         "tags": [
           "MCP"
         ],
-        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing UK PostcodeKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "description": "Model Context Protocol (MCP) server for UK PostcodeKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"uk-postcodekit\": {\n      \"url\": \"https://uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"uk-postcodekit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: uk-postcodekit-postcode-lookup-nearest-distance.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
         "requestBody": {
           "required": true,
           "content": {
@@ -290,6 +646,338 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "PostcodeDetail": {
+        "type": "object",
+        "description": "Postcode details.",
+        "properties": {
+          "postcode": {
+            "type": "string",
+            "description": "Formatted postcode, e.g. SW1A 1AA."
+          },
+          "outcode": {
+            "type": "string",
+            "description": "Outward code, e.g. SW1A."
+          },
+          "incode": {
+            "type": "string",
+            "description": "Inward code, e.g. 1AA."
+          },
+          "area": {
+            "type": "string",
+            "description": "Postcode area letters, e.g. SW.",
+            "nullable": true
+          },
+          "latitude": {
+            "type": "number",
+            "description": "WGS84 latitude.",
+            "nullable": true
+          },
+          "longitude": {
+            "type": "number",
+            "description": "WGS84 longitude.",
+            "nullable": true
+          },
+          "positional_quality": {
+            "type": "integer",
+            "description": "Code-Point Open positional quality: 10 = within a building at the postcode (best), 20-50 = progressively approximate, 60 = postcode-sector mean, 90 = no coordinates.",
+            "nullable": true
+          },
+          "country": {
+            "type": "string",
+            "description": "England, Scotland or Wales.",
+            "nullable": true
+          },
+          "county": {
+            "type": "string",
+            "description": "County (null for unitary authorities and London boroughs).",
+            "nullable": true
+          },
+          "district": {
+            "type": "string",
+            "description": "Local authority district or unitary authority.",
+            "nullable": true
+          },
+          "ward": {
+            "type": "string",
+            "description": "Electoral ward.",
+            "nullable": true
+          },
+          "district_code": {
+            "type": "string",
+            "description": "ONS GSS code of the district, e.g. E09000033.",
+            "nullable": true
+          },
+          "ward_code": {
+            "type": "string",
+            "description": "ONS GSS code of the ward, e.g. E05013806.",
+            "nullable": true
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Required OGL v3 attribution for OS and Royal Mail data. Display it where you show the data."
+          }
+        }
+      },
+      "PostcodeValidation": {
+        "type": "object",
+        "description": "Validation.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Value as sent.",
+            "nullable": true
+          },
+          "valid_format": {
+            "type": "boolean",
+            "description": "Matches the UK postcode pattern."
+          },
+          "exists": {
+            "type": "boolean",
+            "description": "Present in the current database (live, Great Britain)."
+          },
+          "normalized": {
+            "type": "string",
+            "description": "Formatted postcode, or null if the format is invalid.",
+            "nullable": true
+          }
+        }
+      },
+      "NearestResult": {
+        "type": "object",
+        "description": "Nearest postcodes.",
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "description": "Centre latitude."
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Centre longitude."
+          },
+          "radius_m": {
+            "type": "integer",
+            "description": "Effective radius in metres."
+          },
+          "results": {
+            "type": "array",
+            "description": "Postcodes within the radius, nearest first.",
+            "items": {
+              "type": "object",
+              "description": "Nearby postcode.",
+              "properties": {
+                "postcode": {
+                  "type": "string",
+                  "description": "Formatted postcode, e.g. SW1A 1AA."
+                },
+                "outcode": {
+                  "type": "string",
+                  "description": "Outward code, e.g. SW1A."
+                },
+                "incode": {
+                  "type": "string",
+                  "description": "Inward code, e.g. 1AA."
+                },
+                "area": {
+                  "type": "string",
+                  "description": "Postcode area letters, e.g. SW.",
+                  "nullable": true
+                },
+                "latitude": {
+                  "type": "number",
+                  "description": "WGS84 latitude.",
+                  "nullable": true
+                },
+                "longitude": {
+                  "type": "number",
+                  "description": "WGS84 longitude.",
+                  "nullable": true
+                },
+                "positional_quality": {
+                  "type": "integer",
+                  "description": "Code-Point Open positional quality: 10 = within a building at the postcode (best), 20-50 = progressively approximate, 60 = postcode-sector mean, 90 = no coordinates.",
+                  "nullable": true
+                },
+                "country": {
+                  "type": "string",
+                  "description": "England, Scotland or Wales.",
+                  "nullable": true
+                },
+                "county": {
+                  "type": "string",
+                  "description": "County (null for unitary authorities and London boroughs).",
+                  "nullable": true
+                },
+                "district": {
+                  "type": "string",
+                  "description": "Local authority district or unitary authority.",
+                  "nullable": true
+                },
+                "ward": {
+                  "type": "string",
+                  "description": "Electoral ward.",
+                  "nullable": true
+                },
+                "district_code": {
+                  "type": "string",
+                  "description": "ONS GSS code of the district, e.g. E09000033.",
+                  "nullable": true
+                },
+                "ward_code": {
+                  "type": "string",
+                  "description": "ONS GSS code of the ward, e.g. E05013806.",
+                  "nullable": true
+                },
+                "distance_m": {
+                  "type": "integer",
+                  "description": "Distance from the centre in metres."
+                }
+              }
+            }
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Required OGL v3 attribution for OS and Royal Mail data. Display it where you show the data."
+          }
+        }
+      },
+      "AutocompleteResult": {
+        "type": "object",
+        "description": "Suggestions.",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Query as sent."
+          },
+          "results": {
+            "type": "array",
+            "description": "Matching postcodes, alphabetical.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DistanceResult": {
+        "type": "object",
+        "description": "Distance.",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "First postcode, formatted."
+          },
+          "to": {
+            "type": "string",
+            "description": "Second postcode, formatted."
+          },
+          "distance_km": {
+            "type": "number",
+            "description": "Great-circle distance in km (3 dp)."
+          },
+          "distance_miles": {
+            "type": "number",
+            "description": "Great-circle distance in miles (3 dp)."
+          },
+          "note": {
+            "type": "string",
+            "description": "Reminder that this is straight-line distance."
+          }
+        }
+      },
+      "OutcodeResult": {
+        "type": "object",
+        "description": "Outcode summary.",
+        "properties": {
+          "outcode": {
+            "type": "string",
+            "description": "Outcode, upper-cased."
+          },
+          "postcodes": {
+            "type": "integer",
+            "description": "Postcodes in the outcode that have coordinates."
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Mean latitude of those postcodes."
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Mean longitude."
+          },
+          "districts": {
+            "type": "array",
+            "description": "Local authority districts covered, alphabetical.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Required OGL v3 attribution for OS and Royal Mail data. Display it where you show the data."
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Temporarily unavailable: an upstream registry or a data file is briefly unavailable. Retry after a few seconds.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Temporarily unavailable, retry shortly"
+            }
           }
         }
       }
