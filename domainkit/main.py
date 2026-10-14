@@ -125,7 +125,10 @@ def site_scan(domain):
 
 @functions_framework.http
 def handler(request):
-    path, a = request.path.rstrip("/") or "/", request.args
+    return dispatch(request, request.path)
+
+def dispatch(request, path):
+    path, a = path.rstrip("/") or "/", request.args
     try:
         if path in ("/", "/health"): return jsonify(status="ok")
         if PROXY_SECRET and request.headers.get("X-RapidAPI-Proxy-Secret") != PROXY_SECRET:
