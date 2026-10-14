@@ -2,36 +2,105 @@
   "openapi": "3.0.0",
   "info": {
     "title": "GeoIP - IP Geolocation, ASN & ISP Lookup",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "description": "# GeoIP: IP Geolocation, ASN and ISP Lookup\n\nCountry-level IP geolocation with network intelligence for IPv4 and IPv6: country, continent, EU flag, ASN and the organisation that runs the network. Answers in milliseconds from a local database, with bulk lookups of up to 100 IPs.\n\n**Who it's for:** SaaS and e-commerce teams localising content, enforcing geo rules or screening traffic, and analytics and security tools.\n\n## Use cases\n- Pre-select the right country, currency and language on first visit.\n- Apply EU-specific consent or VAT logic with `is_eu`.\n- Spot traffic from hosting providers and data centres via the ASN organisation.\n- Enrich server logs and analytics events with country and ISP.\n- Enforce country-based licensing or sanctions rules (as one signal among several).\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com/lookup?ip=8.8.8.8' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Precision is country level; city and coordinates are not provided.\n- Private, loopback and reserved addresses are recognised and returned without location data.\n- Every response includes an `attribution` string required by the data licence.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `413` input too large, `422` missing or invalid parameter, `503` temporarily unavailable, retry shortly. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- IP to country and ASN data: DB-IP Lite databases by DB-IP (https://db-ip.com), licensed under Creative Commons Attribution 4.0 International (CC BY 4.0). Attribution is included in every response.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
   },
   "servers": [
     {
       "url": "https://webkit-api-1003933593053.us-central1.run.app/geo"
     }
   ],
+  "tags": [
+    {
+      "name": "IP lookup",
+      "description": "Country, continent, ASN and ISP for IPv4 and IPv6 addresses."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
   "paths": {
     "/lookup": {
       "get": {
-        "summary": "Look up IP",
+        "operationId": "lookupIp",
+        "tags": [
+          "IP lookup"
+        ],
+        "summary": "Look up an IP address",
+        "description": "Returns country, continent, EU membership, ASN and network organisation (ISP or hosting provider) for any IPv4 or IPv6 address, plus flags for private, loopback and multicast ranges. Served from a local database, so lookups take milliseconds.",
         "parameters": [
           {
             "name": "ip",
             "in": "query",
             "required": true,
-            "description": "IPv4 or IPv6",
+            "description": "IPv4 or IPv6 address, e.g. 8.8.8.8 or 2a00:1450:4009::1.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 45
             },
             "example": "8.8.8.8"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Geolocation.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/IpGeo"
+                },
+                "example": {
+                  "asn": 15169,
+                  "attribution": "IP geolocation by DB-IP (https://db-ip.com), CC BY 4.0",
+                  "continent": "North America",
+                  "continent_code": "NA",
+                  "country": "United States",
+                  "country_code": "US",
+                  "ip": "8.8.8.8",
+                  "is_eu": false,
+                  "is_global": true,
+                  "is_loopback": false,
+                  "is_multicast": false,
+                  "is_private": false,
+                  "organization": "Google LLC",
+                  "version": 4
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Missing or invalid IP address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ip must be a valid IPv4 or IPv6 address"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Geo database briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Geo database unavailable"
                 }
               }
             }
@@ -41,15 +110,55 @@
     },
     "/me": {
       "get": {
-        "summary": "Look up caller's IP",
+        "operationId": "lookupCallerIp",
+        "tags": [
+          "IP lookup"
+        ],
+        "summary": "Look up the caller's own IP",
+        "description": "Geolocates the IP the request appears to come from (the first address in X-Forwarded-For). Behind the RapidAPI gateway this is the address the gateway forwards, which may be the gateway itself rather than your end user; for production, pass the user's IP to /lookup.",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Geolocation of the calling address.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/IpGeo"
+                },
+                "example": {
+                  "asn": 20712,
+                  "attribution": "IP geolocation by DB-IP (https://db-ip.com), CC BY 4.0",
+                  "continent": "Europe",
+                  "continent_code": "EU",
+                  "country": "United Kingdom",
+                  "country_code": "GB",
+                  "ip": "81.2.69.142",
+                  "is_eu": false,
+                  "is_global": true,
+                  "is_loopback": false,
+                  "is_multicast": false,
+                  "is_private": false,
+                  "organization": "Andrews & Arnold Ltd",
+                  "version": 4
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Geo database briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Geo database unavailable"
                 }
               }
             }
@@ -59,14 +168,34 @@
     },
     "/bulk": {
       "post": {
-        "summary": "Bulk lookup (up to 100)",
+        "operationId": "lookupIpsBulk",
+        "tags": [
+          "IP lookup"
+        ],
+        "summary": "Look up up to 100 IPs at once",
+        "description": "Geolocates up to 100 addresses in one request. Results come back in input order; an invalid entry yields `{ip, error}` instead of failing the batch.",
         "parameters": [],
         "requestBody": {
           "required": true,
+          "description": "Addresses to look up.",
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
+                "properties": {
+                  "ips": {
+                    "type": "array",
+                    "description": "1-100 IPv4/IPv6 addresses.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "ips"
+                ],
                 "example": {
                   "ips": [
                     "8.8.8.8",
@@ -80,11 +209,107 @@
         },
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Results in input order.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/IpGeoBulk"
+                },
+                "example": {
+                  "results": [
+                    {
+                      "asn": 15169,
+                      "attribution": "IP geolocation by DB-IP (https://db-ip.com), CC BY 4.0",
+                      "continent": "North America",
+                      "continent_code": "NA",
+                      "country": "United States",
+                      "country_code": "US",
+                      "ip": "8.8.8.8",
+                      "is_eu": false,
+                      "is_global": true,
+                      "is_loopback": false,
+                      "is_multicast": false,
+                      "is_private": false,
+                      "organization": "Google LLC",
+                      "version": 4
+                    },
+                    {
+                      "asn": 15169,
+                      "attribution": "IP geolocation by DB-IP (https://db-ip.com), CC BY 4.0",
+                      "continent": "Europe",
+                      "continent_code": "EU",
+                      "country": "United Kingdom",
+                      "country_code": "GB",
+                      "ip": "2a00:1450:4009::1",
+                      "is_eu": false,
+                      "is_global": true,
+                      "is_loopback": false,
+                      "is_multicast": false,
+                      "is_private": false,
+                      "organization": "Google LLC",
+                      "version": 6
+                    },
+                    {
+                      "asn": null,
+                      "attribution": "IP geolocation by DB-IP (https://db-ip.com), CC BY 4.0",
+                      "country": null,
+                      "ip": "10.0.0.1",
+                      "is_global": false,
+                      "is_loopback": false,
+                      "is_multicast": false,
+                      "is_private": true,
+                      "version": 4
+                    },
+                    {
+                      "error": "ip must be a valid IPv4 or IPv6 address",
+                      "ip": "nope"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "More than 100 IPs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "max 100 IPs per request"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`ips` missing, empty or not an array.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "POST JSON {\"ips\": [\"8.8.8.8\", ...]}"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Geo database briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Geo database unavailable"
                 }
               }
             }
@@ -99,7 +324,7 @@
         "tags": [
           "MCP"
         ],
-        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing GeoIP's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "description": "Model Context Protocol (MCP) server for GeoIP. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"geoip\": {\n      \"url\": \"https://geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"geoip\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: geoip-ip-geolocation-asn-isp-lookup.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
         "requestBody": {
           "required": true,
           "content": {
@@ -139,6 +364,167 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "IpGeo": {
+        "type": "object",
+        "description": "Geolocation for one IP address. For private, loopback and other non-public addresses only the address flags plus `country: null`, `asn: null` and `attribution` are returned.",
+        "properties": {
+          "ip": {
+            "type": "string",
+            "description": "Normalised IP address."
+          },
+          "version": {
+            "type": "integer",
+            "description": "4 or 6.",
+            "enum": [
+              4,
+              6
+            ]
+          },
+          "is_private": {
+            "type": "boolean",
+            "description": "RFC 1918 / unique-local / other private range."
+          },
+          "is_global": {
+            "type": "boolean",
+            "description": "Publicly routable address."
+          },
+          "is_multicast": {
+            "type": "boolean",
+            "description": "Multicast address."
+          },
+          "is_loopback": {
+            "type": "boolean",
+            "description": "Loopback address (127.0.0.0/8, ::1)."
+          },
+          "country_code": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 country code.",
+            "nullable": true
+          },
+          "country": {
+            "type": "string",
+            "description": "Country name in English.",
+            "nullable": true
+          },
+          "continent_code": {
+            "type": "string",
+            "description": "Two-letter continent code.",
+            "nullable": true,
+            "enum": [
+              "AF",
+              "AN",
+              "AS",
+              "EU",
+              "NA",
+              "OC",
+              "SA"
+            ]
+          },
+          "continent": {
+            "type": "string",
+            "description": "Continent name in English.",
+            "nullable": true
+          },
+          "is_eu": {
+            "type": "boolean",
+            "description": "Country is an EU member state."
+          },
+          "asn": {
+            "type": "integer",
+            "description": "Autonomous System Number of the network.",
+            "nullable": true
+          },
+          "organization": {
+            "type": "string",
+            "description": "Organisation that operates the AS (ISP, host or company).",
+            "nullable": true
+          },
+          "attribution": {
+            "type": "string",
+            "description": "Attribution string required by the DB-IP licence; display it where you show the data."
+          }
+        }
+      },
+      "IpGeoBulk": {
+        "type": "object",
+        "description": "Bulk results.",
+        "properties": {
+          "results": {
+            "type": "array",
+            "description": "One entry per input, in order. Invalid inputs are `{ip, error}`.",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/IpGeo"
+                },
+                {
+                  "type": "object",
+                  "description": "Invalid input.",
+                  "properties": {
+                    "ip": {
+                      "type": "string",
+                      "description": "Input as sent."
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Why it was rejected."
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
           }
         }
       }
