@@ -20,7 +20,7 @@ def get_pdf(request):
         try: root._safe(url)
         except Exception as e: raise ApiError(400, getattr(e, "msg", "Invalid or disallowed url"))
         try:
-            with httpx.stream("GET", url, timeout=15, follow_redirects=False, headers={"User-Agent": "DocKitAPI/1.0"}) as r:
+            with httpx.stream("GET", url, timeout=15, follow_redirects=False, headers={"User-Agent": "Mozilla/5.0 (compatible; DocKitAPI/1.0; +https://rapidapi.com/Olly-1VN9JTXKG)"}) as r:
                 if r.status_code != 200: raise ApiError(502, f"Fetching url returned {r.status_code}")
                 data = b""
                 for chunk in r.iter_bytes():
