@@ -19,3 +19,4 @@ tzfpy==2.1.1
 tiktoken==0.14.0
 ua-parser==1.0.2
 ua-parser-builtins==202610
+pysqlite3-binary==0.5.4.post2; platform_machine == "x86_64"
