@@ -1,5 +1,7 @@
 """UK PostcodeKit: postcode lookup, nearest postcodes, autocomplete and distance from OS Code-Point Open (OGL v3)."""
-import math, os, re, sqlite3, threading
+import math, os, re, threading
+try: import sqlite3
+except ImportError: import pysqlite3 as sqlite3
 from flask import jsonify
 
 HERE = os.path.dirname(os.path.abspath(__file__))
