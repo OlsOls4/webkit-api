@@ -41,6 +41,5 @@ jobs:
         run: |
           URL=$(gcloud run services describe webkit-api --project webkit-api --region us-central1 --format='value(status.url)')
           curl -fsS "$URL/health"
-          curl -fsS -o /dev/null "$URL/qrkit/qr?text=hi"
-          curl -fsS -o /dev/null "$URL/text/stats?text=hello%20world"
-          curl -fsS "$URL/geo/lookup?ip=8.8.8.8"
+          # Direct access must be blocked (RapidAPI-only gate); expect 403
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL/geo/lookup?ip=8.8.8.8"); echo "direct=$code"; [ "$code" = "403" ]
