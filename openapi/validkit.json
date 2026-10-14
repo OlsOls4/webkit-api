@@ -1,227 +1,278 @@
 {
- "openapi": "3.0.0",
- "info": {
-  "title": "ValidKit - IBAN, VAT, Card, ISBN, BIC & Postcode Validator",
-  "version": "1.0.0"
- },
- "servers": [
-  {
-   "url": "https://webkit-api-1003933593053.us-central1.run.app/valid"
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ValidKit - IBAN, VAT, Card, ISBN, BIC & Postcode Validator",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app/valid"
+    }
+  ],
+  "paths": {
+    "/iban": {
+      "get": {
+        "summary": "Validate IBAN",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "description": "IBAN",
+            "schema": {
+              "type": "string"
+            },
+            "example": "GB82WEST12345698765432"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vat": {
+      "get": {
+        "summary": "Validate EU VAT number format",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "description": "VAT number with country prefix",
+            "schema": {
+              "type": "string"
+            },
+            "example": "DE136695976"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/card": {
+      "get": {
+        "summary": "Card number check (Luhn + brand)",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "description": "Card number",
+            "schema": {
+              "type": "string"
+            },
+            "example": "4111111111111111"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/isbn": {
+      "get": {
+        "summary": "Validate ISBN",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "description": "ISBN-10 or ISBN-13",
+            "schema": {
+              "type": "string"
+            },
+            "example": "0306406152"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bic": {
+      "get": {
+        "summary": "Validate BIC/SWIFT",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "description": "BIC",
+            "schema": {
+              "type": "string"
+            },
+            "example": "DEUTDEFF"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ean": {
+      "get": {
+        "summary": "Validate EAN/GTIN barcode",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "description": "EAN",
+            "schema": {
+              "type": "string"
+            },
+            "example": "4006381333931"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/postcode": {
+      "get": {
+        "summary": "Validate postcode",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "description": "Postcode",
+            "schema": {
+              "type": "string"
+            },
+            "example": "SW1A 1AA"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "description": "ISO country (GB, US, CA, DE, FR...)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "GB"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (ValidKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing ValidKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
   }
- ],
- "paths": {
-  "/iban": {
-   "get": {
-    "summary": "Validate IBAN",
-    "parameters": [
-     {
-      "name": "value",
-      "in": "query",
-      "required": true,
-      "description": "IBAN",
-      "schema": {
-       "type": "string"
-      },
-      "example": "GB82WEST12345698765432"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/vat": {
-   "get": {
-    "summary": "Validate EU VAT number format",
-    "parameters": [
-     {
-      "name": "value",
-      "in": "query",
-      "required": true,
-      "description": "VAT number with country prefix",
-      "schema": {
-       "type": "string"
-      },
-      "example": "DE136695976"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/card": {
-   "get": {
-    "summary": "Card number check (Luhn + brand)",
-    "parameters": [
-     {
-      "name": "value",
-      "in": "query",
-      "required": true,
-      "description": "Card number",
-      "schema": {
-       "type": "string"
-      },
-      "example": "4111111111111111"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/isbn": {
-   "get": {
-    "summary": "Validate ISBN",
-    "parameters": [
-     {
-      "name": "value",
-      "in": "query",
-      "required": true,
-      "description": "ISBN-10 or ISBN-13",
-      "schema": {
-       "type": "string"
-      },
-      "example": "0306406152"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/bic": {
-   "get": {
-    "summary": "Validate BIC/SWIFT",
-    "parameters": [
-     {
-      "name": "value",
-      "in": "query",
-      "required": true,
-      "description": "BIC",
-      "schema": {
-       "type": "string"
-      },
-      "example": "DEUTDEFF"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/ean": {
-   "get": {
-    "summary": "Validate EAN/GTIN barcode",
-    "parameters": [
-     {
-      "name": "value",
-      "in": "query",
-      "required": true,
-      "description": "EAN",
-      "schema": {
-       "type": "string"
-      },
-      "example": "4006381333931"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/postcode": {
-   "get": {
-    "summary": "Validate postcode",
-    "parameters": [
-     {
-      "name": "value",
-      "in": "query",
-      "required": true,
-      "description": "Postcode",
-      "schema": {
-       "type": "string"
-      },
-      "example": "SW1A 1AA"
-     },
-     {
-      "name": "country",
-      "in": "query",
-      "required": true,
-      "description": "ISO country (GB, US, CA, DE, FR...)",
-      "schema": {
-       "type": "string"
-      },
-      "example": "GB"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  }
- }
 }
