@@ -1,0 +1,278 @@
+{
+ "openapi": "3.0.0",
+ "info": {
+  "title": "LLMKit - Token Counter, RAG Chunker, HTML to Markdown & JSON Repair",
+  "version": "1.0.0"
+ },
+ "servers": [
+  {
+   "url": "https://webkit-api-1003933593053.us-central1.run.app/llm"
+  }
+ ],
+ "paths": {
+  "/tokens": {
+   "get": {
+    "summary": "Count tokens",
+    "parameters": [
+     {
+      "name": "text",
+      "in": "query",
+      "required": true,
+      "description": "Text to count",
+      "schema": {
+       "type": "string"
+      },
+      "example": "Hello world, this is LLMKit."
+     },
+     {
+      "name": "encoding",
+      "in": "query",
+      "required": false,
+      "description": "o200k_base (GPT-4o), cl100k_base (GPT-4), p50k_base, r50k_base",
+      "schema": {
+       "type": "string"
+      },
+      "example": "o200k_base"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    },
+    "description": "Exact tiktoken counts. POST JSON {\"text\": ...} for long text."
+   }
+  },
+  "/chunk": {
+   "post": {
+    "summary": "Chunk text for RAG",
+    "parameters": [
+     {
+      "name": "chunk_size",
+      "in": "query",
+      "required": false,
+      "description": "Max tokens per chunk",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 500
+     },
+     {
+      "name": "overlap",
+      "in": "query",
+      "required": false,
+      "description": "Token overlap",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 50
+     },
+     {
+      "name": "mode",
+      "in": "query",
+      "required": false,
+      "description": "tokens, sentences or paragraphs",
+      "schema": {
+       "type": "string"
+      },
+      "example": "sentences"
+     },
+     {
+      "name": "encoding",
+      "in": "query",
+      "required": false,
+      "description": "Tokenizer",
+      "schema": {
+       "type": "string"
+      },
+      "example": "o200k_base"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    },
+    "description": "Split long text into token-bounded chunks with overlap, ready for embeddings.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "example": {
+         "text": "First sentence here. Second sentence follows. A third one ends the paragraph.\n\nNew paragraph starts."
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/truncate": {
+   "get": {
+    "summary": "Truncate to token budget",
+    "parameters": [
+     {
+      "name": "text",
+      "in": "query",
+      "required": true,
+      "description": "Text",
+      "schema": {
+       "type": "string"
+      },
+      "example": "A long prompt that needs to fit in a context window."
+     },
+     {
+      "name": "max_tokens",
+      "in": "query",
+      "required": false,
+      "description": "Token budget",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 8
+     },
+     {
+      "name": "keep",
+      "in": "query",
+      "required": false,
+      "description": "start or end",
+      "schema": {
+       "type": "string"
+      },
+      "example": "start"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/clean": {
+   "get": {
+    "summary": "Clean text for LLMs",
+    "parameters": [
+     {
+      "name": "text",
+      "in": "query",
+      "required": true,
+      "description": "Text",
+      "schema": {
+       "type": "string"
+      },
+      "example": "Hello\u200b   world\n\n\n\nBye"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    },
+    "description": "NFKC normalise, strip zero-width characters, collapse whitespace."
+   }
+  },
+  "/extract-json": {
+   "post": {
+    "summary": "Extract & repair JSON from LLM output",
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    },
+    "description": "Pull JSON out of chatty model output, fix trailing commas, single quotes, unquoted keys, Python literals and unclosed brackets.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "example": {
+         "text": "Sure! Here you go:\n```json\n{name: 'Jane', 'age': 30, tags: ['a','b',],}\n```"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/to-markdown": {
+   "get": {
+    "summary": "URL or HTML to Markdown",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": false,
+      "description": "Web page URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://en.wikipedia.org/wiki/Large_language_model"
+     },
+     {
+      "name": "max_chars",
+      "in": "query",
+      "required": false,
+      "description": "Max characters",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 20000
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    },
+    "description": "Clean Markdown plus token count. POST JSON {\"html\": ...} to convert raw HTML."
+   }
+  }
+ }
+}
