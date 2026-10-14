@@ -2,83 +2,179 @@
   "openapi": "3.0.0",
   "info": {
     "title": "WebKit - Email Validator, Link Preview & Article Extractor",
-    "version": "1.0.0"
+    "version": "1.1.0",
+    "description": "# WebKit: Email Validator, Link Preview and Article Extractor\n\nThree everyday web utilities behind one key: validate email addresses (syntax, MX, disposable, role and typo detection), turn any URL into a rich link preview, and extract the readable article from a page as clean text and Markdown.\n\n**Who it's for:** developers building signup forms, CRMs, chat apps, CMSs, newsletters and AI/LLM pipelines that need clean web content.\n\n## Use cases\n- Block disposable and mistyped emails at signup, and suggest `jane@gmail.com` for `jane@gmial.com`.\n- Clean a marketing list before a send to protect sender reputation.\n- Render Slack-style link cards in a chat or social app.\n- Pull article text from URLs for summarisation, RAG ingestion or read-later apps.\n- Enrich CRM leads with the website title and description.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://webkit-email-validator-link-preview-article-extractor.p.rapidapi.com/email/validate?email=jane%40gmial.com' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: webkit-email-validator-link-preview-article-extractor.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`webkit-email-validator-link-preview-article-extractor.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Email checks are DNS-based: the API never connects to the mail server or sends mail, so `deliverable` means 'very likely deliverable', not a mailbox guarantee.\n- URL endpoints fetch pages live with a 10 second timeout and read at most 3 MB. JavaScript is not executed, so content rendered client-side may be missing.\n- Only public http(s) URLs are allowed; private and reserved IP ranges are blocked.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `400` disallowed URL (not http/https, or a private address), `415` fetched URL is not HTML, `422` missing or invalid parameter, `502` upstream site or service failed. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Live DNS lookups for MX and A records.\n- Built-in, curated lists of disposable domains, role mailboxes, free providers and common typos.\n- Page content is fetched from the URL you supply; you are responsible for respecting the target site's terms.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
   },
   "servers": [
     {
       "url": "https://webkit-api-1003933593053.us-central1.run.app"
     }
   ],
+  "tags": [
+    {
+      "name": "Email",
+      "description": "Email address validation for signup and lead forms."
+    },
+    {
+      "name": "URLs",
+      "description": "Link previews and article extraction from public web pages."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
   "paths": {
     "/email/validate": {
       "get": {
-        "summary": "Validate email",
+        "operationId": "validateEmail",
+        "tags": [
+          "Email"
+        ],
+        "summary": "Validate an email address",
+        "description": "Checks syntax, looks up the domain's mail servers (MX, with A-record fallback), and flags disposable domains, role accounts, free providers and common domain typos. Returns a verdict, a 0-100 score and a `did_you_mean` suggestion. No email is sent and no SMTP probe is made, so it is fast and safe for signup forms.",
         "parameters": [
           {
             "name": "email",
             "in": "query",
             "required": true,
-            "description": "Email address to check",
+            "description": "Email address to check. Max 254 characters. Remember to URL-encode `+` as `%2B`.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "email",
+              "maxLength": 254
             },
-            "example": "test@gmail.com"
+            "example": "jane@gmial.com"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Validation result.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/EmailValidation"
+                },
+                "example": {
+                  "checks": {
+                    "disposable": false,
+                    "free_provider": false,
+                    "mx_found": true,
+                    "role_account": false,
+                    "syntax": true
+                  },
+                  "did_you_mean": "jane@gmail.com",
+                  "domain": "gmial.com",
+                  "email": "jane@gmial.com",
+                  "mx_records": [
+                    "gmial.com"
+                  ],
+                  "score": 70,
+                  "verdict": "risky"
                 }
               }
             }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
     },
     "/url/preview": {
       "get": {
-        "summary": "Link preview",
+        "operationId": "previewUrl",
+        "tags": [
+          "URLs"
+        ],
+        "summary": "Get a link preview for a URL",
+        "description": "Fetches a page and returns the metadata a chat app or CMS needs to render a rich link card: title, description, image, site name, type, favicon, language and canonical URL. Open Graph tags win, then Twitter Card tags, then plain HTML.\n\nThe page is fetched live (10 s timeout, first 3 MB read). Errors: `400` non-http(s) or private address, `415` not an HTML page, `422` missing URL or host does not resolve, `502` fetch failed or the site returned HTTP 4xx/5xx.",
         "parameters": [
           {
             "name": "url",
             "in": "query",
             "required": true,
-            "description": "Page URL",
+            "description": "Public page URL to fetch, starting with http:// or https://. Max 2048 characters. Up to 5 redirects are followed; private, loopback and reserved addresses are refused.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048
             },
-            "example": "https://www.bbc.co.uk/news"
+            "example": "https://github.com"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Preview metadata.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/LinkPreview"
+                },
+                "example": {
+                  "canonical": "https://github.com",
+                  "description": "Join the world's most widely adopted, AI-powered developer platform where millions of developers, businesses, and the largest open source community build software that advances humanity.",
+                  "favicon": "https://github.com/favicon.ico",
+                  "image": "https://images.ctfassets.net/8aevphvgewt8/4pe4eOtUJ0ARpZRE4fNekf/f52b1f9c52f059a33170229883731ed0/GH-Homepage-Universe-img.png",
+                  "language": "en",
+                  "site_name": "GitHub",
+                  "status_code": 200,
+                  "title": "GitHub · Change is constant. GitHub keeps you ahead. · GitHub",
+                  "type": "object",
+                  "url": "https://github.com"
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
           }
         }
       }
     },
     "/url/extract": {
       "get": {
-        "summary": "Extract article",
+        "operationId": "extractArticle",
+        "tags": [
+          "URLs"
+        ],
+        "summary": "Extract article text and Markdown",
+        "description": "Fetches a page, removes navigation, headers, footers, scripts, forms, tables and figures, picks the largest <article>/<main> block, and returns clean text plus Markdown with title, author and publish date. Ideal for reading modes, summarisation and feeding LLMs.\n\nThe page is fetched live (10 s timeout, first 3 MB read). Errors: `400` non-http(s) or private address, `415` not an HTML page, `422` missing URL or host does not resolve, `502` fetch failed or the site returned HTTP 4xx/5xx.",
         "parameters": [
           {
             "name": "url",
             "in": "query",
             "required": true,
-            "description": "Article URL",
+            "description": "Public page URL to fetch, starting with http:// or https://. Max 2048 characters. Up to 5 redirects are followed; private, loopback and reserved addresses are refused.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048
             },
             "example": "https://en.wikipedia.org/wiki/Bristol"
           },
@@ -86,23 +182,54 @@
             "name": "max_chars",
             "in": "query",
             "required": false,
-            "description": "500-100000, default 20000",
+            "description": "Maximum characters returned in `text` and in `markdown`. Values outside 500-100000 are clamped.",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "minimum": 500,
+              "maximum": 100000,
+              "default": 20000
             },
             "example": 20000
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Extracted article.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Article"
+                },
+                "example": {
+                  "author": null,
+                  "markdown": "Bristol ( / ˈ b r ɪ s t əl / ) is a city and ceremonial county in South West England . It is on the River Avon , and bordered by Gloucestershire to the north and Somerset to the south, with a short coastline on the Bristol Channel to the west. The county includes most of the Bristol conurbation , but the urban area extends into South Gloucestershire , Bath and North East Somerset , and North Somerset .\n\nThe county is almost entirely urbanised and had an estimated population of 494,399 in 2024 , making Bristol the most populous city in the region. For local government purposes the county is a u",
+                  "published": null,
+                  "status_code": 200,
+                  "text": "Bristol ( / ˈ b r ɪ s t əl / ) is a city and ceremonial county in South West England . It is on the River Avon , and bordered by Gloucestershire to the north and Somerset to the south, with a short coastline on the Bristol Channel to the west. The county includes most of the Bristol conurbation , but the urban area extends into South Gloucestershire , Bath and North East Somerset , and North Somerset .\n\nThe county is almost entirely urbanised and had an estimated population of 494,399 in 2024 , making Bristol the most populous city in the region. For local government purposes the county is a u",
+                  "title": "Bristol - Wikipedia",
+                  "url": "https://en.wikipedia.org/wiki/Bristol",
+                  "word_count": 115
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
           }
         }
       }
@@ -114,7 +241,7 @@
         "tags": [
           "MCP"
         ],
-        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing WebKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "description": "Model Context Protocol (MCP) server for WebKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://webkit-email-validator-link-preview-article-extractor.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: webkit-email-validator-link-preview-article-extractor.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"webkit\": {\n      \"url\": \"https://webkit-email-validator-link-preview-article-extractor.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"webkit-email-validator-link-preview-article-extractor.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"webkit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://webkit-email-validator-link-preview-article-extractor.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:webkit-email-validator-link-preview-article-extractor.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://webkit-email-validator-link-preview-article-extractor.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: webkit-email-validator-link-preview-article-extractor.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
         "requestBody": {
           "required": true,
           "content": {
@@ -154,6 +281,273 @@
         "responses": {
           "200": {
             "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "EmailValidation": {
+        "type": "object",
+        "description": "Email validation result.",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The address that was checked, trimmed."
+          },
+          "verdict": {
+            "type": "string",
+            "description": "Overall verdict. `deliverable`: syntax OK, mail server found, not disposable or role, score >= 90. `risky`: passes basics but is a role account or a likely typo of a major provider. `disposable`: throwaway inbox provider. `invalid`: bad syntax or the domain has no mail server.",
+            "enum": [
+              "deliverable",
+              "risky",
+              "disposable",
+              "invalid"
+            ]
+          },
+          "score": {
+            "type": "integer",
+            "description": "Confidence score 0-100: +40 valid syntax, +40 mail server found, +10 not disposable, +10 not a role account, -30 if the domain is a known typo. 0 when syntax is invalid.",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "checks": {
+            "type": "object",
+            "description": "Individual checks.",
+            "properties": {
+              "syntax": {
+                "type": "boolean",
+                "description": "Address matches RFC 5322-style syntax (local part up to 64 chars, no consecutive dots)."
+              },
+              "mx_found": {
+                "type": "boolean",
+                "description": "Domain has MX records, or an A record that can accept mail as a fallback."
+              },
+              "disposable": {
+                "type": "boolean",
+                "description": "Domain is on the built-in list of disposable or temporary email providers."
+              },
+              "role_account": {
+                "type": "boolean",
+                "description": "Local part is a role mailbox such as info, admin, support, sales or noreply."
+              },
+              "free_provider": {
+                "type": "boolean",
+                "description": "Domain is a free consumer mailbox provider such as gmail.com, outlook.com or yahoo.com."
+              }
+            }
+          },
+          "domain": {
+            "type": "string",
+            "description": "Lower-cased domain part."
+          },
+          "mx_records": {
+            "type": "array",
+            "description": "Up to 5 mail server hostnames, lowest MX preference first. Contains the domain itself when only an A record exists.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "did_you_mean": {
+            "type": "string",
+            "description": "Suggested correction when the domain is a common typo (for example gmial.com), otherwise null.",
+            "nullable": true
+          }
+        }
+      },
+      "LinkPreview": {
+        "type": "object",
+        "description": "Link preview metadata (Open Graph, Twitter Card and HTML fallbacks).",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Final URL after redirects.",
+            "format": "uri"
+          },
+          "status_code": {
+            "type": "integer",
+            "description": "HTTP status of the final response."
+          },
+          "title": {
+            "type": "string",
+            "description": "og:title, then twitter:title, then the HTML <title>.",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "og:description, then twitter:description, then meta description.",
+            "nullable": true
+          },
+          "image": {
+            "type": "string",
+            "description": "Absolute URL of og:image or twitter:image.",
+            "nullable": true,
+            "format": "uri"
+          },
+          "site_name": {
+            "type": "string",
+            "description": "og:site_name.",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "description": "og:type, for example website or article.",
+            "nullable": true
+          },
+          "favicon": {
+            "type": "string",
+            "description": "Absolute favicon URL from <link rel=icon>, falling back to /favicon.ico.",
+            "format": "uri"
+          },
+          "language": {
+            "type": "string",
+            "description": "Value of the <html lang> attribute.",
+            "nullable": true
+          },
+          "canonical": {
+            "type": "string",
+            "description": "Value of <link rel=canonical>, as written in the page.",
+            "nullable": true
+          }
+        }
+      },
+      "Article": {
+        "type": "object",
+        "description": "Main article content extracted from the page.",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Final URL after redirects.",
+            "format": "uri"
+          },
+          "status_code": {
+            "type": "integer",
+            "description": "HTTP status of the final response."
+          },
+          "title": {
+            "type": "string",
+            "description": "HTML <title>.",
+            "nullable": true
+          },
+          "author": {
+            "type": "string",
+            "description": "meta author or article:author.",
+            "nullable": true
+          },
+          "published": {
+            "type": "string",
+            "description": "article:published_time or meta date, as written in the page.",
+            "nullable": true
+          },
+          "word_count": {
+            "type": "integer",
+            "description": "Words in the returned `text`."
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain text of headings, paragraphs, list items, quotes and code blocks, separated by blank lines, cut to `max_chars`."
+          },
+          "markdown": {
+            "type": "string",
+            "description": "The same content as Markdown (# headings, - lists, > quotes), cut to `max_chars`."
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request: the URL is not http(s), or points to a private, loopback or reserved address.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Private or reserved addresses are not allowed"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "UnsupportedMediaType": {
+        "description": "Unsupported media type: the fetched URL is not an HTML page.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "URL is not an HTML page"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Unprocessable: a required parameter is missing or a value is invalid. The `error` text says which.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "A required parameter is missing or invalid"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
+          }
+        }
+      },
+      "BadGateway": {
+        "description": "Bad gateway: the remote site or upstream service could not be reached, timed out, or returned an error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Fetch failed: ConnectTimeout"
+            }
           }
         }
       }
