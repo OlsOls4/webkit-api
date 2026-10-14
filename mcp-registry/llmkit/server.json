@@ -1,32 +1,32 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.OlsOls4/llmkit",
-  "title": "LLMKit MCP",
+  "title": "LLMKit",
   "description": "Token counting, RAG chunking, truncation, HTML to Markdown and JSON repair",
   "repository": {
     "url": "https://github.com/OlsOls4/webkit-api",
     "source": "github"
   },
   "version": "1.1.0",
-  "websiteUrl": "https://rapidapi.com/Olly-1VN9JTXKG/api/apikit-mcp-69-tools-for-ai-agents",
+  "websiteUrl": "https://rapidapi.com/Olly-1VN9JTXKG/api/llmkit-token-counter-rag-chunker-json-repair",
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://apikit-mcp-69-tools-for-ai-agents.p.rapidapi.com/llmkit",
+      "url": "https://llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com/mcp",
       "headers": [
         {
           "name": "X-RapidAPI-Key",
-          "description": "Your RapidAPI key (subscribe to APIKit MCP on RapidAPI; free plan available)",
+          "description": "Your RapidAPI key (subscribe to LLMKit on RapidAPI; free plan available)",
           "isRequired": true,
           "isSecret": true
         },
         {
           "name": "X-RapidAPI-Host",
-          "description": "RapidAPI host",
+          "description": "RapidAPI host for this API",
           "isRequired": true,
-          "default": "apikit-mcp-69-tools-for-ai-agents.p.rapidapi.com",
+          "default": "llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com",
           "choices": [
-            "apikit-mcp-69-tools-for-ai-agents.p.rapidapi.com"
+            "llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com"
           ]
         }
       ]
