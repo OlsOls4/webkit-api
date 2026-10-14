@@ -65,9 +65,24 @@ def ssl_info(domain, port=443):
             "days_remaining": (na - dt.datetime.now(dt.timezone.utc)).days, "protocol": proto, "cipher": cipher,
             "serial_number": cert.get("serialNumber")}
 
+_BOOT = {}
+def _rdap_base(domain):
+    if not _BOOT:
+        try:
+            for tlds, urls in httpx.get("https://data.iana.org/rdap/dns.json", timeout=10).json()["services"]:
+                u = next((x for x in urls if x.startswith("https")), urls[0])
+                for t in tlds: _BOOT[t.lower()] = u if u.endswith("/") else u + "/"
+        except Exception: pass
+    parts = domain.lower().split(".")
+    for i in range(len(parts)):
+        b = _BOOT.get(".".join(parts[i:]))
+        if b: return b
+    return "https://rdap.org/"
+
 def whois(domain):
+    base = _rdap_base(domain)
     try:
-        r = httpx.get(f"https://rdap.org/domain/{domain}", timeout=10, follow_redirects=True, headers={"User-Agent": UA, "Accept": "application/rdap+json"})
+        r = httpx.get(f"{base}domain/{domain}", timeout=10, follow_redirects=True, headers={"User-Agent": UA, "Accept": "application/rdap+json"})
     except httpx.HTTPError as e: raise ApiError(502, f"RDAP lookup failed: {type(e).__name__}")
     if r.status_code == 404: raise ApiError(404, "Domain not found in RDAP (unregistered or TLD without RDAP)")
     if r.status_code != 200: raise ApiError(502, f"RDAP returned {r.status_code}")
