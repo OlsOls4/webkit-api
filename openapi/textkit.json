@@ -1,315 +1,366 @@
 {
- "openapi": "3.0.0",
- "info": {
-  "title": "TextKit - Sentiment, Language, Readability & Keywords",
-  "version": "1.0.0"
- },
- "servers": [
-  {
-   "url": "https://webkit-api-1003933593053.us-central1.run.app/text"
+  "openapi": "3.0.0",
+  "info": {
+    "title": "TextKit - Sentiment, Language, Readability & Keywords",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app/text"
+    }
+  ],
+  "paths": {
+    "/analyze": {
+      "get": {
+        "summary": "Full analysis (all-in-one)",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Text (or POST JSON {\"text\":...})",
+            "schema": {
+              "type": "string"
+            },
+            "example": "I love this product but shipping was slow."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sentiment": {
+      "get": {
+        "summary": "Sentiment",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Text",
+            "schema": {
+              "type": "string"
+            },
+            "example": "I love this product but shipping was slow."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/language": {
+      "get": {
+        "summary": "Detect language",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Text",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Bonjour tout le monde"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readability": {
+      "get": {
+        "summary": "Readability scores",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Text",
+            "schema": {
+              "type": "string"
+            },
+            "example": "The quick brown fox jumps over the lazy dog. It was not amused."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/keywords": {
+      "get": {
+        "summary": "Keywords & key phrases",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Text",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Cloud computing lets small businesses scale cloud storage cheaply."
+          },
+          {
+            "name": "top",
+            "in": "query",
+            "required": false,
+            "description": "1-50",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 10
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/summarize": {
+      "get": {
+        "summary": "Extractive summary",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Text",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Long article text..."
+          },
+          {
+            "name": "sentences",
+            "in": "query",
+            "required": false,
+            "description": "1-20",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profanity": {
+      "get": {
+        "summary": "Profanity filter",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Text",
+            "schema": {
+              "type": "string"
+            },
+            "example": "What the heck"
+          },
+          {
+            "name": "mask",
+            "in": "query",
+            "required": false,
+            "description": "Mask character",
+            "schema": {
+              "type": "string"
+            },
+            "example": "*"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/slugify": {
+      "get": {
+        "summary": "Slugify",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Text",
+            "schema": {
+              "type": "string"
+            },
+            "example": "H\u00e9llo W\u00f6rld! 2026"
+          },
+          {
+            "name": "separator",
+            "in": "query",
+            "required": false,
+            "description": "- or _",
+            "schema": {
+              "type": "string"
+            },
+            "example": "-"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stats": {
+      "get": {
+        "summary": "Text statistics",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Text",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Hello world. Second sentence."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (TextKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing TextKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
   }
- ],
- "paths": {
-  "/analyze": {
-   "get": {
-    "summary": "Full analysis (all-in-one)",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Text (or POST JSON {\"text\":...})",
-      "schema": {
-       "type": "string"
-      },
-      "example": "I love this product but shipping was slow."
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/sentiment": {
-   "get": {
-    "summary": "Sentiment",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Text",
-      "schema": {
-       "type": "string"
-      },
-      "example": "I love this product but shipping was slow."
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/language": {
-   "get": {
-    "summary": "Detect language",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Text",
-      "schema": {
-       "type": "string"
-      },
-      "example": "Bonjour tout le monde"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/readability": {
-   "get": {
-    "summary": "Readability scores",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Text",
-      "schema": {
-       "type": "string"
-      },
-      "example": "The quick brown fox jumps over the lazy dog. It was not amused."
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/keywords": {
-   "get": {
-    "summary": "Keywords & key phrases",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Text",
-      "schema": {
-       "type": "string"
-      },
-      "example": "Cloud computing lets small businesses scale cloud storage cheaply."
-     },
-     {
-      "name": "top",
-      "in": "query",
-      "required": false,
-      "description": "1-50",
-      "schema": {
-       "type": "integer"
-      },
-      "example": 10
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/summarize": {
-   "get": {
-    "summary": "Extractive summary",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Text",
-      "schema": {
-       "type": "string"
-      },
-      "example": "Long article text..."
-     },
-     {
-      "name": "sentences",
-      "in": "query",
-      "required": false,
-      "description": "1-20",
-      "schema": {
-       "type": "integer"
-      },
-      "example": 3
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/profanity": {
-   "get": {
-    "summary": "Profanity filter",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Text",
-      "schema": {
-       "type": "string"
-      },
-      "example": "What the heck"
-     },
-     {
-      "name": "mask",
-      "in": "query",
-      "required": false,
-      "description": "Mask character",
-      "schema": {
-       "type": "string"
-      },
-      "example": "*"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/slugify": {
-   "get": {
-    "summary": "Slugify",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Text",
-      "schema": {
-       "type": "string"
-      },
-      "example": "H\u00e9llo W\u00f6rld! 2026"
-     },
-     {
-      "name": "separator",
-      "in": "query",
-      "required": false,
-      "description": "- or _",
-      "schema": {
-       "type": "string"
-      },
-      "example": "-"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/stats": {
-   "get": {
-    "summary": "Text statistics",
-    "parameters": [
-     {
-      "name": "text",
-      "in": "query",
-      "required": true,
-      "description": "Text",
-      "schema": {
-       "type": "string"
-      },
-      "example": "Hello world. Second sentence."
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
-  }
- }
 }
