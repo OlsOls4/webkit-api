@@ -1,143 +1,194 @@
 {
- "openapi": "3.0.0",
- "info": {
-  "title": "FraudKit - Fraud Risk Score for Signups & Orders (Email, IP, Phone, User-Agent)",
-  "version": "1.0.0"
- },
- "servers": [
-  {
-   "url": "https://webkit-api-1003933593053.us-central1.run.app/fraud"
-  }
- ],
- "paths": {
-  "/score": {
-   "get": {
-    "summary": "Fraud risk score",
-    "parameters": [
-     {
-      "name": "email",
-      "in": "query",
-      "required": false,
-      "description": "Customer email",
-      "schema": {
-       "type": "string"
-      },
-      "example": "jane@mailinator.com"
-     },
-     {
-      "name": "ip",
-      "in": "query",
-      "required": false,
-      "description": "Customer IP address",
-      "schema": {
-       "type": "string"
-      },
-      "example": "104.28.1.1"
-     },
-     {
-      "name": "phone",
-      "in": "query",
-      "required": false,
-      "description": "Phone number (E.164 or national)",
-      "schema": {
-       "type": "string"
-      },
-      "example": "+447911123456"
-     },
-     {
-      "name": "user_agent",
-      "in": "query",
-      "required": false,
-      "description": "Browser user-agent string",
-      "schema": {
-       "type": "string"
-      },
-      "example": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
-     },
-     {
-      "name": "country",
-      "in": "query",
-      "required": false,
-      "description": "Billing country (ISO 3166-1 alpha-2)",
-      "schema": {
-       "type": "string"
-      },
-      "example": "GB"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    },
-    "description": "Combine email, IP, phone and user-agent signals into a 0-100 risk score with reasons and an allow/review/block recommendation. Provide at least one field. POST JSON with the same keys also works."
-   }
+  "openapi": "3.0.0",
+  "info": {
+    "title": "FraudKit - Fraud Risk Score for Signups & Orders (Email, IP, Phone, User-Agent)",
+    "version": "1.0.0"
   },
-  "/user-agent": {
-   "get": {
-    "summary": "Parse user-agent",
-    "parameters": [
-     {
-      "name": "ua",
-      "in": "query",
-      "required": true,
-      "description": "User-agent string",
-      "schema": {
-       "type": "string"
-      },
-      "example": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    },
-    "description": "Browser, OS, device and bot detection."
-   }
-  },
-  "/disposable": {
-   "get": {
-    "summary": "Disposable email domain check",
-    "parameters": [
-     {
-      "name": "domain",
-      "in": "query",
-      "required": true,
-      "description": "Domain or email",
-      "schema": {
-       "type": "string"
-      },
-      "example": "mailinator.com"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app/fraud"
     }
-   }
+  ],
+  "paths": {
+    "/score": {
+      "get": {
+        "summary": "Fraud risk score",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "description": "Customer email",
+            "schema": {
+              "type": "string"
+            },
+            "example": "jane@mailinator.com"
+          },
+          {
+            "name": "ip",
+            "in": "query",
+            "required": false,
+            "description": "Customer IP address",
+            "schema": {
+              "type": "string"
+            },
+            "example": "104.28.1.1"
+          },
+          {
+            "name": "phone",
+            "in": "query",
+            "required": false,
+            "description": "Phone number (E.164 or national)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "+447911123456"
+          },
+          {
+            "name": "user_agent",
+            "in": "query",
+            "required": false,
+            "description": "Browser user-agent string",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "Billing country (ISO 3166-1 alpha-2)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "GB"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "description": "Combine email, IP, phone and user-agent signals into a 0-100 risk score with reasons and an allow/review/block recommendation. Provide at least one field. POST JSON with the same keys also works."
+      }
+    },
+    "/user-agent": {
+      "get": {
+        "summary": "Parse user-agent",
+        "parameters": [
+          {
+            "name": "ua",
+            "in": "query",
+            "required": true,
+            "description": "User-agent string",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "description": "Browser, OS, device and bot detection."
+      }
+    },
+    "/disposable": {
+      "get": {
+        "summary": "Disposable email domain check",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "required": true,
+            "description": "Domain or email",
+            "schema": {
+              "type": "string"
+            },
+            "example": "mailinator.com"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (FraudKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing FraudKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
   }
- }
 }
