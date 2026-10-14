@@ -125,7 +125,7 @@ def handler(request):
         return jsonify(sha256=hashlib.sha256(v.encode()).hexdigest() if v else None)
     if path == "/mcp" or path.startswith("/mcp/"):
         import mcpserver
-        return mcpserver.handle(request, path[5:] or None)
+        return mcpserver.handle(request, path[5:] or "webkit")
     if path.endswith("/mcp"):
         kit = {"": "webkit", "/domain": "domainkit", "/qrkit": "qrkit", "/text": "textkit", "/phone": "phonekit", "/valid": "validkit", "/geo": "geoip",
                "/doc": "dockit", "/fraud": "fraudkit", "/llm": "llmkit", "/image": "imagekit", "/cal": "calkit", "/postcode": "ukpostcode"}.get(path[:-4])
