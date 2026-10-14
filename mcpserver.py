@@ -1,6 +1,6 @@
 """MCP (Model Context Protocol) server exposing every kit as tools, generated from openapi/*.json.
 Streamable HTTP transport, stateless JSON responses. Discovery (initialize, tools/list) is open;
-tools/call requires the RapidAPI gateway (subscribe to the 'APIKit MCP' listing on RapidAPI)."""
+tools/call requires the RapidAPI gateway (each API's own RapidAPI listing; MCP lives at <listing host>/mcp)."""
 import base64, glob, json, os, re
 from flask import jsonify, Response, current_app
 
@@ -22,6 +22,7 @@ def _all():
         kit = os.path.basename(f)[:-5]; spec = json.load(open(f))
         prefix = spec["servers"][0]["url"].split(".run.app", 1)[-1]
         for path, ops in spec["paths"].items():
+            if path == "/mcp": continue
             for method, o in ops.items():
                 if method not in ("get", "post"): continue
                 name = (kit + "_" + re.sub(r"[^a-z0-9]+", "_", path.lower()).strip("_"))[:64]
@@ -63,7 +64,7 @@ def call(name, args, kit=None):
     if mime.startswith("image/") and mime != "image/svg+xml":
         return {"content": [{"type": "image", "data": base64.b64encode(data).decode(), "mimeType": mime}], "isError": code >= 400}
     if mime == "application/pdf":
-        return {"content": [{"type": "resource", "resource": {"uri": "apikit://dockit/output.pdf", "mimeType": mime, "blob": base64.b64encode(data).decode()}}], "isError": code >= 400}
+        return {"content": [{"type": "resource", "resource": {"uri": "dockit://output.pdf", "mimeType": mime, "blob": base64.b64encode(data).decode()}}], "isError": code >= 400}
     text = data.decode("utf-8", "replace")
     res = {"content": [{"type": "text", "text": text[:200000]}], "isError": code >= 400}
     if mime == "application/json" and code < 400:
@@ -81,14 +82,14 @@ def rpc(msg, request, kit=None):
     if m == "initialize":
         return ok({"protocolVersion": p.get("protocolVersion") if p.get("protocolVersion") in ("2025-06-18", "2025-03-26", "2024-11-05") else PROTO,
                    "capabilities": {"tools": {"listChanged": False}},
-                   "serverInfo": {"name": "apikit" + (f"-{kit}" if kit else ""), "title": (KIT_NAMES.get(kit, kit) + " MCP") if kit else "APIKit: 13 developer APIs", "version": "1.1.0"},
-                   "instructions": "Validation, enrichment, fraud scoring, LLM text utilities, images, QR codes, PDFs, holidays and UK postcodes. Tool calls are billed through RapidAPI: subscribe to 'APIKit MCP' at https://rapidapi.com/user/Olly-1VN9JTXKG and send your X-RapidAPI-Key header."})
+                   "serverInfo": {"name": kit or "all-tools", "title": KIT_NAMES.get(kit, "All tools"), "version": "1.1.0"},
+                   "instructions": f"{KIT_NAMES.get(kit, 'These tools')}. Tool calls are billed through this API's RapidAPI listing: subscribe there and send your X-RapidAPI-Key and X-RapidAPI-Host headers."})
     if m and m.startswith("notifications/"): return None
     if m == "ping": return ok({})
     if m == "tools/list": return ok({"tools": [t["def"] for t in tools(kit).values()]})
     if m == "tools/call":
         if not main.gate_ok(request):
-            return ok({"isError": True, "content": [{"type": "text", "text": "Tool calls require a RapidAPI subscription. Subscribe to 'APIKit MCP' at https://rapidapi.com/user/Olly-1VN9JTXKG and connect via the RapidAPI URL with your X-RapidAPI-Key header."}]})
+            return ok({"isError": True, "content": [{"type": "text", "text": "Tool calls require a RapidAPI subscription. Subscribe to this API on RapidAPI (free plan available) and connect via its RapidAPI host with your X-RapidAPI-Key header: https://rapidapi.com/user/Olly-1VN9JTXKG"}]})
         try: return ok(call(p.get("name"), p.get("arguments"), kit))
         except Exception as e: return ok({"isError": True, "content": [{"type": "text", "text": f"Tool error: {type(e).__name__}: {str(e)[:200]}"}]})
     if m in ("resources/list",): return ok({"resources": []})
@@ -96,10 +97,11 @@ def rpc(msg, request, kit=None):
     return err(-32601, f"Method not found: {m}")
 
 def handle(request, kit=None):
+    if kit == "all": kit = None
     if kit and kit not in KIT_NAMES: return jsonify(error="Unknown kit. Use one of: " + ", ".join(KIT_NAMES)), 404
     if request.method == "GET":
         if "text/event-stream" in (request.headers.get("Accept") or ""): return Response("SSE stream not supported; use POST", status=405)
-        return jsonify(name="apikit" + (f"-{kit}" if kit else ""), transport="streamable-http", tools=len(tools(kit)), kits=list(KIT_NAMES), docs="https://rapidapi.com/user/Olly-1VN9JTXKG")
+        return jsonify(name=kit or "all-tools", transport="streamable-http", tools=len(tools(kit)), docs="https://rapidapi.com/user/Olly-1VN9JTXKG")
     if request.method == "DELETE": return Response(status=204)
     if request.method != "POST": return Response(status=405)
     msg = request.get_json(silent=True)
