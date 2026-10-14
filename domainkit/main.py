@@ -5,7 +5,7 @@ from flask import jsonify
 
 PROXY_SECRET = os.getenv("RAPIDAPI_PROXY_SECRET", "")
 DOMAIN_RE = re.compile(r"^(?=.{1,253}$)(?!-)([a-z0-9-]{1,63}(?<!-)\.)+[a-z]{2,63}$")
-UA = "Mozilla/5.0 (compatible; DomainKitAPI/1.0)"
+UA = "Mozilla/5.0 (compatible; DomainKitAPI/1.0; +https://rapidapi.com/Olly-1VN9JTXKG; ollymcbride4@gmail.com)"
 
 class ApiError(Exception):
     def __init__(self, code, msg): self.code, self.msg = code, msg
@@ -81,9 +81,14 @@ def _rdap_base(domain):
 
 def whois(domain):
     base = _rdap_base(domain)
-    try:
-        r = httpx.get(f"{base}domain/{domain}", timeout=10, follow_redirects=True, headers={"User-Agent": UA, "Accept": "application/rdap+json"})
-    except httpx.HTTPError as e: raise ApiError(502, f"RDAP lookup failed: {type(e).__name__}")
+    import time
+    for attempt in range(3):
+        try:
+            r = httpx.get(f"{base}domain/{domain}", timeout=10, follow_redirects=True, headers={"User-Agent": UA, "Accept": "application/rdap+json"})
+        except httpx.HTTPError as e: raise ApiError(502, f"RDAP lookup failed: {type(e).__name__}")
+        if r.status_code not in (429, 503) or attempt == 2: break
+        time.sleep(1.5 * (attempt + 1))
+    if r.status_code in (429, 503): raise ApiError(503, "Registry RDAP server is rate limiting; retry in a few seconds")
     if r.status_code == 404: raise ApiError(404, "Domain not found in RDAP (unregistered or TLD without RDAP)")
     if r.status_code != 200: raise ApiError(502, f"RDAP returned {r.status_code}")
     d = r.json()
