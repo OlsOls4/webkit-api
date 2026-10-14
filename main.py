@@ -7,7 +7,7 @@ from flask import jsonify
 
 PROXY_SECRET = os.getenv("RAPIDAPI_PROXY_SECRET", "")
 MAX_BYTES = 3_000_000
-UA = "Mozilla/5.0 (compatible; WebKitAPI/1.0)"
+UA = "Mozilla/5.0 (compatible; WebKitAPI/1.0; +https://rapidapi.com/Olly-1VN9JTXKG; ollymcbride4@gmail.com)"
 
 class ApiError(Exception):
     def __init__(self, code, msg): self.code, self.msg = code, msg
@@ -70,6 +70,7 @@ def _fetch(url):
                 if r.is_redirect: url = urljoin(url, r.headers.get("location", "")); _safe(url); continue
                 break
     except httpx.HTTPError as e: raise ApiError(502, f"Fetch failed: {type(e).__name__}")
+    if r.status_code >= 400: raise ApiError(502, f"Target site returned HTTP {r.status_code}")
     if "html" not in r.headers.get("content-type", "html"): raise ApiError(415, "URL is not an HTML page")
     return str(r.url), r.status_code, r.content[:MAX_BYTES].decode(r.encoding or "utf-8", "replace")
 
