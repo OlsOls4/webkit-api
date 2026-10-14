@@ -1,0 +1,4 @@
+functions-framework==3.*
+segno==1.6.1
+python-barcode==0.15.1
+pillow==11.0.0
