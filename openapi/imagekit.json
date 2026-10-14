@@ -1,0 +1,542 @@
+{
+ "openapi": "3.0.0",
+ "info": {
+  "title": "ImageKit - Image Resize, Convert to WebP, Compress, Crop & EXIF",
+  "version": "1.0.0"
+ },
+ "servers": [
+  {
+   "url": "https://webkit-api-1003933593053.us-central1.run.app/image"
+  }
+ ],
+ "paths": {
+  "/info": {
+   "get": {
+    "summary": "Image info & EXIF",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Image URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/resize": {
+   "get": {
+    "summary": "Resize image",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Image URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+     },
+     {
+      "name": "width",
+      "in": "query",
+      "required": false,
+      "description": "Width px",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 400
+     },
+     {
+      "name": "height",
+      "in": "query",
+      "required": false,
+      "description": "Height px",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "fit",
+      "in": "query",
+      "required": false,
+      "description": "contain, cover or fill",
+      "schema": {
+       "type": "string"
+      },
+      "example": "contain"
+     },
+     {
+      "name": "format",
+      "in": "query",
+      "required": false,
+      "description": "Output format (jpeg, png, webp...)",
+      "schema": {
+       "type": "string"
+      },
+      "example": "webp"
+     },
+     {
+      "name": "quality",
+      "in": "query",
+      "required": false,
+      "description": "1-100",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 82
+     },
+     {
+      "name": "output",
+      "in": "query",
+      "required": false,
+      "description": "binary (default) or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "binary"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     }
+    },
+    "description": "Also accepts multipart 'file', raw body or JSON {\"base64\": ...}."
+   }
+  },
+  "/convert": {
+   "get": {
+    "summary": "Convert format",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Image URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+     },
+     {
+      "name": "format",
+      "in": "query",
+      "required": true,
+      "description": "jpeg, png, webp, gif, bmp, tiff, ico",
+      "schema": {
+       "type": "string"
+      },
+      "example": "webp"
+     },
+     {
+      "name": "quality",
+      "in": "query",
+      "required": false,
+      "description": "1-100",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 82
+     },
+     {
+      "name": "output",
+      "in": "query",
+      "required": false,
+      "description": "binary or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "binary"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/compress": {
+   "get": {
+    "summary": "Compress image",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Image URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+     },
+     {
+      "name": "quality",
+      "in": "query",
+      "required": false,
+      "description": "1-100",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 70
+     },
+     {
+      "name": "max_width",
+      "in": "query",
+      "required": false,
+      "description": "Downscale wider images",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 1600
+     },
+     {
+      "name": "format",
+      "in": "query",
+      "required": false,
+      "description": "Output format (default webp)",
+      "schema": {
+       "type": "string"
+      },
+      "example": "webp"
+     },
+     {
+      "name": "output",
+      "in": "query",
+      "required": false,
+      "description": "binary or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "base64"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/thumbnail": {
+   "get": {
+    "summary": "Square thumbnail",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Image URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "description": "Pixels",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 200
+     },
+     {
+      "name": "format",
+      "in": "query",
+      "required": false,
+      "description": "Output format",
+      "schema": {
+       "type": "string"
+      },
+      "example": "webp"
+     },
+     {
+      "name": "output",
+      "in": "query",
+      "required": false,
+      "description": "binary or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "binary"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/crop": {
+   "get": {
+    "summary": "Crop image",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Image URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+     },
+     {
+      "name": "x",
+      "in": "query",
+      "required": false,
+      "description": "Left",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 0
+     },
+     {
+      "name": "y",
+      "in": "query",
+      "required": false,
+      "description": "Top",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 0
+     },
+     {
+      "name": "width",
+      "in": "query",
+      "required": true,
+      "description": "Width",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 200
+     },
+     {
+      "name": "height",
+      "in": "query",
+      "required": true,
+      "description": "Height",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 200
+     },
+     {
+      "name": "output",
+      "in": "query",
+      "required": false,
+      "description": "binary or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "binary"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/rotate": {
+   "get": {
+    "summary": "Rotate / flip",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Image URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+     },
+     {
+      "name": "degrees",
+      "in": "query",
+      "required": false,
+      "description": "Clockwise degrees",
+      "schema": {
+       "type": "integer"
+      },
+      "example": 90
+     },
+     {
+      "name": "flip",
+      "in": "query",
+      "required": false,
+      "description": "horizontal or vertical",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "output",
+      "in": "query",
+      "required": false,
+      "description": "binary or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "binary"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/grayscale": {
+   "get": {
+    "summary": "Grayscale",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Image URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+     },
+     {
+      "name": "output",
+      "in": "query",
+      "required": false,
+      "description": "binary or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "binary"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/strip-exif": {
+   "get": {
+    "summary": "Strip EXIF / GPS metadata",
+    "parameters": [
+     {
+      "name": "url",
+      "in": "query",
+      "required": true,
+      "description": "Image URL",
+      "schema": {
+       "type": "string"
+      },
+      "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+     },
+     {
+      "name": "output",
+      "in": "query",
+      "required": false,
+      "description": "binary or base64",
+      "schema": {
+       "type": "string"
+      },
+      "example": "binary"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}
