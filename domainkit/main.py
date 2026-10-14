@@ -79,6 +79,47 @@ def _rdap_base(domain):
         if b: return b
     return "https://rdap.org/"
 
+import socket as _sock, re as _re
+def _p43(server, q):
+    c = _sock.create_connection((server, 43), 8); c.settimeout(8); c.sendall(q.encode() + b"\r\n"); out = b""
+    try:
+        while (b := c.recv(8192)) and len(out) < 200000: out += b
+    finally: c.close()
+    return out.decode("utf-8", "replace")
+
+def _port43(domain):
+    try:
+        tld = domain.rsplit(".", 1)[-1]
+        m = _re.search(r"(?im)^whois:[ \t]*(\S+)", _p43("whois.iana.org", tld))
+        server = m.group(1) if m else f"whois.nic.{tld}"
+        txt = _p43(server, domain)
+        m2 = _re.search(r"(?im)^[ \t]*Registrar WHOIS Server:[ \t]*(\S+)", txt)
+        if m2 and m2.group(1).lower() != server.lower():
+            try: txt = _p43(m2.group(1), domain) + "\n" + txt
+            except Exception: pass
+    except Exception: return None
+    if _re.search(r"(?i)no match|not found|no data found|no entries found", txt[:2000]): raise ApiError(404, "Domain not found (unregistered)")
+    def f(*pats):
+        for pt in pats:
+            mm = _re.search(pt, txt, _re.I | _re.M)
+            if mm: return mm.group(1).strip()
+    registrar = f(r"^\s*Registrar:\s*(\S.*)$", r"^\s*Registrar:\s*\n\s*(\S.*)$", r"^\s*Sponsoring Registrar:\s*(\S.*)$")
+    if registrar: registrar = _re.sub(r"\s*\[Tag = .*\]", "", registrar)
+    created = f(r"^\s*Creation Date:\s*(\S.*)$", r"^\s*Registered on:\s*(\S.*)$", r"^\s*created:\s*(\S.*)$")
+    expires = f(r"^\s*Registry Expiry Date:\s*(\S.*)$", r"^\s*Expiry date:\s*(\S.*)$", r"^\s*Registrar Registration Expiration Date:\s*(\S.*)$", r"^\s*expires:\s*(\S.*)$")
+    updated = f(r"^\s*Updated Date:\s*(\S.*)$", r"^\s*Last updated:\s*(\S.*)$", r"^\s*changed:\s*(\S.*)$")
+    ns = [x.lower() for x in _re.findall(r"(?im)^\s*Name Server:\s*(\S+)", txt)]
+    if not ns:
+        blk = _re.search(r"(?is)Name servers:\s*\n(.*?)\n\s*\n", txt)
+        if blk: ns = [l.split()[0].lower() for l in blk.group(1).splitlines() if l.strip()]
+    age = None
+    if created:
+        for fmt, n in (("%Y-%m-%dT%H:%M:%S", 19), ("%Y-%m-%d", 10), ("%d-%b-%Y", 11), ("%d.%m.%Y", 10)):
+            try: age = (dt.datetime.now() - dt.datetime.strptime(created[:n], fmt)).days; break
+            except ValueError: pass
+    return {"domain": domain, "registered": True, "registrar": registrar, "created": created, "updated": updated,
+            "expires": expires, "domain_age_days": age, "status": [], "nameservers": list(dict.fromkeys(ns)), "dnssec": None, "source": "whois"}
+
 def whois(domain):
     base = _rdap_base(domain)
     import time
@@ -88,7 +129,10 @@ def whois(domain):
         except httpx.HTTPError as e: raise ApiError(502, f"RDAP lookup failed: {type(e).__name__}")
         if r.status_code not in (429, 503) or attempt == 2: break
         time.sleep(1.5 * (attempt + 1))
-    if r.status_code in (429, 503): raise ApiError(503, "Registry RDAP server is rate limiting; retry in a few seconds")
+    if r.status_code in (429, 503, 403):
+        fb = _port43(domain)
+        if fb: return fb
+        raise ApiError(503, "Registry lookup is rate limited right now; retry in a few seconds")
     if r.status_code == 404: raise ApiError(404, "Domain not found in RDAP (unregistered or TLD without RDAP)")
     if r.status_code != 200: raise ApiError(502, f"RDAP returned {r.status_code}")
     d = r.json()
