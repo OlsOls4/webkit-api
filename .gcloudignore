@@ -1,0 +1,6 @@
+.git
+.github
+domainkit/
+qrkit/
+textkit/
+__pycache__/
