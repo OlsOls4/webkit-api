@@ -36,7 +36,10 @@ jobs:
           if [ -n "$PROXY_SECRET" ]; then ENVFLAG="--set-env-vars=RAPIDAPI_PROXY_SECRET=$PROXY_SECRET"; fi
           gcloud run deploy ${{ matrix.service }} --source ${{ matrix.dir }} --project webkit-api --region us-central1 \
             --allow-unauthenticated --memory 512Mi --cpu 1 --max-instances 1 --quiet $ENVFLAG > out.txt 2>&1 || {
-            echo "::error::$(tail -c 1500 out.txt | tr '\n' ' ')"; exit 1; }
+            BID=$(grep -o 'builds/[0-9a-f-]\{36\}' out.txt | head -1 | cut -d/ -f2)
+            [ -z "$BID" ] && BID=$(gcloud builds list --project webkit-api --region us-central1 --limit=1 --format='value(id)')
+            gcloud builds log "$BID" --project webkit-api --region us-central1 > blog.txt 2>&1 || true
+            echo "::error::$(grep -iE 'error|fail|not found|no such' blog.txt | tail -c 3000 | tr '\n' ' ')"; exit 1; }
       - name: Smoke test
         run: |
           URL=$(gcloud run services describe ${{ matrix.service }} --project webkit-api --region us-central1 --format='value(status.url)')
