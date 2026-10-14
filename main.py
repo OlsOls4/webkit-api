@@ -125,7 +125,13 @@ def handler(request):
         return jsonify(sha256=hashlib.sha256(v.encode()).hexdigest() if v else None)
     if path == "/mcp" or path.startswith("/mcp/"):
         import mcpserver
-        return mcpserver.handle(request)
+        return mcpserver.handle(request, path[5:] or None)
+    if path.endswith("/mcp"):
+        kit = {"": "webkit", "/domain": "domainkit", "/qrkit": "qrkit", "/text": "textkit", "/phone": "phonekit", "/valid": "validkit", "/geo": "geoip",
+               "/doc": "dockit", "/fraud": "fraudkit", "/llm": "llmkit", "/image": "imagekit", "/cal": "calkit", "/postcode": "ukpostcode"}.get(path[:-4])
+        if kit:
+            import mcpserver
+            return mcpserver.handle(request, kit)
     if path not in ("/", "/health") and ALLOWED_HASHES:
         v = request.headers.get("X-RapidAPI-Proxy-Secret", "")
         if not v or hashlib.sha256(v.encode()).hexdigest() not in ALLOWED_HASHES:
