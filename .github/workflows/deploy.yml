@@ -28,6 +28,13 @@ jobs:
             gunzip -c /tmp/$f.gz > geoip/$f.mmdb
           done
           ls -la geoip
+      - name: Build UK postcode DB (OS Code-Point Open, OGL v3) and tokenizer cache
+        run: |
+          pip install -q openpyxl tiktoken==0.14.0
+          curl -sfL "https://api.os.uk/downloads/v1/products/CodePointOpen/downloads?area=GB&format=CSV&redirect" -o /tmp/codepo.zip
+          python ukpostcode/build.py /tmp/codepo.zip ukpostcode/postcodes.sqlite
+          TIKTOKEN_CACHE_DIR=llmkit/tiktoken_cache python -c "import tiktoken; [tiktoken.get_encoding(e) for e in ('o200k_base','cl100k_base','p50k_base','r50k_base')]"
+          ls -la ukpostcode llmkit/tiktoken_cache
       - name: Deploy
         env:
           PROXY_SECRET: ${{ secrets.RAPIDAPI_PROXY_SECRET }}
@@ -35,7 +42,7 @@ jobs:
           ENVFLAG=""
           if [ -n "$PROXY_SECRET" ]; then ENVFLAG="--set-env-vars=RAPIDAPI_PROXY_SECRET=$PROXY_SECRET"; fi
           gcloud run deploy webkit-api --source . --project webkit-api --region us-central1 \
-            --allow-unauthenticated --memory 512Mi --cpu 1 --max-instances 1 --quiet $ENVFLAG > out.txt 2>&1 || {
+            --allow-unauthenticated --memory 1Gi --cpu 1 --max-instances 1 --quiet $ENVFLAG > out.txt 2>&1 || {
             echo "::error::$(tail -c 1500 out.txt | tr '\n' ' ')"; exit 1; }
       - name: Smoke test
         run: |
@@ -43,3 +50,4 @@ jobs:
           curl -fsS "$URL/health"
           # Direct access must be blocked (RapidAPI-only gate); expect 403
           code=$(curl -s -o /dev/null -w "%{http_code}" "$URL/geo/lookup?ip=8.8.8.8"); echo "direct=$code"; [ "$code" = "403" ]
+          curl -fsS -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$URL/mcp" | grep -q fraudkit_score
