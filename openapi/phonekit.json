@@ -1,118 +1,169 @@
 {
- "openapi": "3.0.0",
- "info": {
-  "title": "PhoneKit - Phone Number Validation, Carrier & Line Type",
-  "version": "1.0.0"
- },
- "servers": [
-  {
-   "url": "https://webkit-api-1003933593053.us-central1.run.app/phone"
-  }
- ],
- "paths": {
-  "/validate": {
-   "get": {
-    "summary": "Validate phone number",
-    "parameters": [
-     {
-      "name": "number",
-      "in": "query",
-      "required": true,
-      "description": "Phone number, local or international",
-      "schema": {
-       "type": "string"
-      },
-      "example": "+447911123456"
-     },
-     {
-      "name": "country",
-      "in": "query",
-      "required": false,
-      "description": "Default ISO country for local numbers",
-      "schema": {
-       "type": "string"
-      },
-      "example": "GB"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
-        }
-       }
-      }
-     }
-    }
-   }
+  "openapi": "3.0.0",
+  "info": {
+    "title": "PhoneKit - Phone Number Validation, Carrier & Line Type",
+    "version": "1.0.0"
   },
-  "/bulk": {
-   "post": {
-    "summary": "Bulk validate (up to 100)",
-    "parameters": [],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "type": "object",
-        "example": {
-         "numbers": [
-          "+447911123456",
-          "+14155552671",
-          "0207 946 0000"
-         ],
-         "country": "GB"
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app/phone"
+    }
+  ],
+  "paths": {
+    "/validate": {
+      "get": {
+        "summary": "Validate phone number",
+        "parameters": [
+          {
+            "name": "number",
+            "in": "query",
+            "required": true,
+            "description": "Phone number, local or international",
+            "schema": {
+              "type": "string"
+            },
+            "example": "+447911123456"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "Default ISO country for local numbers",
+            "schema": {
+              "type": "string"
+            },
+            "example": "GB"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
     },
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
+    "/bulk": {
+      "post": {
+        "summary": "Bulk validate (up to 100)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "example": {
+                  "numbers": [
+                    "+447911123456",
+                    "+14155552671",
+                    "0207 946 0000"
+                  ],
+                  "country": "GB"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
-    }
-   }
-  },
-  "/example": {
-   "get": {
-    "summary": "Example number for a country",
-    "parameters": [
-     {
-      "name": "country",
-      "in": "query",
-      "required": true,
-      "description": "ISO 3166 alpha-2",
-      "schema": {
-       "type": "string"
-      },
-      "example": "US"
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "OK",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object"
+    },
+    "/example": {
+      "get": {
+        "summary": "Example number for a country",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "description": "ISO 3166 alpha-2",
+            "schema": {
+              "type": "string"
+            },
+            "example": "US"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (PhoneKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (streamable HTTP, JSON-RPC 2.0) endpoint exposing PhoneKit's endpoints as tools. Point Claude Desktop, Cursor or any MCP client at https://<this API's RapidAPI host>/mcp with your X-RapidAPI-Key and X-RapidAPI-Host headers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
     }
-   }
   }
- }
 }
