@@ -109,6 +109,10 @@ def extract(url, max_chars):
 @functions_framework.http
 def handler(request):
     path, a = request.path.rstrip("/") or "/", request.args
+    for prefix, mod in (("/domain", "domainkit"), ("/qrkit", "qrkit"), ("/text", "textkit")):
+        if path == prefix or path.startswith(prefix + "/"):
+            import importlib
+            return importlib.import_module(mod + ".main").dispatch(request, path[len(prefix):] or "/")
     try:
         if path in ("/", "/health"): return jsonify(status="ok")
         if PROXY_SECRET and request.headers.get("X-RapidAPI-Proxy-Secret") != PROXY_SECRET:
