@@ -5,7 +5,17 @@ import dns.resolver, httpx, functions_framework
 from bs4 import BeautifulSoup
 from flask import jsonify
 
+import hashlib
 PROXY_SECRET = os.getenv("RAPIDAPI_PROXY_SECRET", "")
+def _load_hashes():
+    h = set()
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "proxy_hashes.txt")) as f:
+            h = {l.strip().lower() for l in f if re.fullmatch(r"[0-9a-fA-F]{64}", l.strip())}
+    except OSError: pass
+    if PROXY_SECRET: h.add(hashlib.sha256(PROXY_SECRET.encode()).hexdigest())
+    return h
+ALLOWED_HASHES = _load_hashes()
 MAX_BYTES = 3_000_000
 UA = "Mozilla/5.0 (compatible; WebKitAPI/1.0; +https://rapidapi.com/Olly-1VN9JTXKG; ollymcbride4@gmail.com)"
 
@@ -110,14 +120,19 @@ def extract(url, max_chars):
 @functions_framework.http
 def handler(request):
     path, a = request.path.rstrip("/") or "/", request.args
+    if path == "/_proxyhash":
+        v = request.headers.get("X-RapidAPI-Proxy-Secret", "")
+        return jsonify(sha256=hashlib.sha256(v.encode()).hexdigest() if v else None)
+    if path not in ("/", "/health") and ALLOWED_HASHES:
+        v = request.headers.get("X-RapidAPI-Proxy-Secret", "")
+        if not v or hashlib.sha256(v.encode()).hexdigest() not in ALLOWED_HASHES:
+            return jsonify(error="Direct access is disabled. Subscribe on RapidAPI: https://rapidapi.com/user/Olly-1VN9JTXKG"), 403
     for prefix, mod in (("/domain", "domainkit"), ("/qrkit", "qrkit"), ("/text", "textkit"), ("/phone", "phonekit"), ("/valid", "validkit"), ("/geo", "geoip"), ("/doc", "dockit")):
         if path == prefix or path.startswith(prefix + "/"):
             import importlib
             return importlib.import_module(mod + ".main").dispatch(request, path[len(prefix):] or "/")
     try:
         if path in ("/", "/health"): return jsonify(status="ok")
-        if PROXY_SECRET and request.headers.get("X-RapidAPI-Proxy-Secret") != PROXY_SECRET:
-            raise ApiError(403, "Use this API through RapidAPI.")
         if path == "/email/validate":
             e = a.get("email", "")
             if not e or len(e) > 254: raise ApiError(422, "email query parameter is required (max 254 chars)")
