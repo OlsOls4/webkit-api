@@ -1,32 +1,32 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.OlsOls4/domainkit",
-  "title": "DomainKit MCP",
+  "title": "DomainKit",
   "description": "DNS records, SSL certificate, WHOIS/RDAP and website tech scan for any domain",
   "repository": {
     "url": "https://github.com/OlsOls4/webkit-api",
     "source": "github"
   },
   "version": "1.1.0",
-  "websiteUrl": "https://rapidapi.com/Olly-1VN9JTXKG/api/apikit-mcp-69-tools-for-ai-agents",
+  "websiteUrl": "https://rapidapi.com/Olly-1VN9JTXKG/api/domainkit-dns-ssl-whois-website-tech-lookup",
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://apikit-mcp-69-tools-for-ai-agents.p.rapidapi.com/domainkit",
+      "url": "https://domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com/mcp",
       "headers": [
         {
           "name": "X-RapidAPI-Key",
-          "description": "Your RapidAPI key (subscribe to APIKit MCP on RapidAPI; free plan available)",
+          "description": "Your RapidAPI key (subscribe to DomainKit on RapidAPI; free plan available)",
           "isRequired": true,
           "isSecret": true
         },
         {
           "name": "X-RapidAPI-Host",
-          "description": "RapidAPI host",
+          "description": "RapidAPI host for this API",
           "isRequired": true,
-          "default": "apikit-mcp-69-tools-for-ai-agents.p.rapidapi.com",
+          "default": "domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com",
           "choices": [
-            "apikit-mcp-69-tools-for-ai-agents.p.rapidapi.com"
+            "domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com"
           ]
         }
       ]
