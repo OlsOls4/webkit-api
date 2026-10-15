@@ -16,10 +16,15 @@ jobs:
         run: curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
       - name: Login (GitHub OIDC)
         run: ./mcp-publisher login github-oidc
-      - name: Publish all servers
+      - name: Publish new or changed servers
         run: |
           fail=0
           for d in mcp-registry/*/; do
-            echo "== $d"; (cd "$d" && ../../mcp-publisher publish) || { echo "::warning::publish failed for $d"; fail=1; }
+            f="$d/server.json"; [ -f "$f" ] || continue
+            name=$(jq -r .name "$f"); ver=$(jq -r .version "$f")
+            if curl -sf "https://registry.modelcontextprotocol.io/v0/servers?search=$name" | jq -e --arg n "$name" --arg v "$ver" '[.servers[] | select(.server.name==$n and .server.version==$v)] | length > 0' >/dev/null; then
+              echo "== $name $ver already published, skipping"; continue
+            fi
+            echo "== publishing $name $ver"; (cd "$d" && ../../mcp-publisher publish) || { echo "::warning::publish failed for $d"; fail=1; }
           done
           exit $fail
