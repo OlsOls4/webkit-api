@@ -1,0 +1,1043 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "LLMKit - Token Counter, RAG Chunker, HTML to Markdown & JSON Repair",
+    "version": "1.1.0",
+    "description": "# LLMKit: Token Counter, RAG Chunker, HTML to Markdown and JSON Repair\n\nThe plumbing every LLM app needs, as a fast API: exact token counts, token-aware chunking for RAG, token-budget truncation, text cleaning, web page or HTML to Markdown, and robust JSON extraction and repair from model output. No model calls, so it is cheap and deterministic.\n\n**Who it's for:** developers building chatbots, agents, RAG pipelines and AI features in any language, especially where tiktoken is not available (no-code tools, edge runtimes, mobile).\n\n## Use cases\n- Estimate prompt cost and check context-window fit before every call.\n- Chunk documents with overlap before embedding them into a vector database.\n- Trim chat history to a token budget, keeping the most recent turns.\n- Turn web pages into compact Markdown for grounding prompts.\n- Reliably parse JSON from models that wrap it in prose or produce trailing commas.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com/tokens?text=Hello%20world&encoding=o200k_base' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Text inputs accept up to 2,000,000 characters. POST endpoints take JSON `{\"text\": ...}`; GET endpoints take `text` in the query string.\n- Token counts use OpenAI's tiktoken encodings; for non-OpenAI models treat them as close estimates.\n- Web fetching (to-markdown) has a 10 second timeout and does not run JavaScript.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `400` disallowed URL (not http/https, or a private address), `413` input too large, `415` fetched URL is not HTML, `422` missing or invalid parameter, `502` upstream site or service failed, `503` temporarily unavailable, retry shortly. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Tokenization: OpenAI tiktoken encodings (MIT licence).\n- Web pages are fetched from the URL you provide; respect the target site's terms.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    },
+    "x-rapidapi-host": "llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com"
+  },
+  "servers": [
+    {
+      "url": "https://llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com",
+      "description": "RapidAPI gateway (subscribe on RapidAPI; a free plan is available)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Tokens",
+      "description": "Exact token counting and token-budget truncation."
+    },
+    {
+      "name": "RAG",
+      "description": "Chunking for embeddings and retrieval."
+    },
+    {
+      "name": "Text prep",
+      "description": "Cleaning, HTML/URL to Markdown and JSON repair for LLM pipelines."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
+  "paths": {
+    "/tokens": {
+      "get": {
+        "operationId": "countTokens",
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Count tokens for OpenAI-style models",
+        "description": "Returns the exact token count for the chosen tiktoken encoding, plus characters, words, characters per token and the models that use the encoding. Use it to estimate cost and check context-window fit before calling a model. Counts are exact for OpenAI models and a good approximation for others.",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Input text (max 2,000,000 characters; 413 above that). In a GET query string, keep text within your HTTP client's URL length limit.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Hello world, this is a token counter."
+          },
+          {
+            "name": "encoding",
+            "in": "query",
+            "required": false,
+            "description": "Tokenizer: `o200k_base` (GPT-4o, GPT-4.1, o-series), `cl100k_base` (GPT-4, GPT-3.5, text-embedding-3), `p50k_base` (Codex, text-davinci), `r50k_base` (GPT-3).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "o200k_base",
+                "cl100k_base",
+                "p50k_base",
+                "r50k_base"
+              ],
+              "default": "o200k_base"
+            },
+            "example": "o200k_base"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token count.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenCount"
+                },
+                "example": {
+                  "characters": 37,
+                  "chars_per_token": 4.11,
+                  "encoding": "o200k_base",
+                  "models": "GPT-4o, GPT-4.1, o-series",
+                  "tokens": 9,
+                  "words": 7
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 2,000,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 2,000,000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Tokenizer briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Tokenizer unavailable, retry shortly"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chunk": {
+      "post": {
+        "operationId": "chunkText",
+        "tags": [
+          "RAG"
+        ],
+        "summary": "Split text into token-sized chunks for RAG",
+        "description": "Splits long text into chunks of at most `chunk_size` tokens with `overlap` tokens of context carried between neighbours, ready for embedding and vector search. `tokens` mode cuts exactly on token boundaries; `sentences` and `paragraphs` modes keep whole sentences or paragraphs together (a single unit longer than `chunk_size` becomes its own chunk). Settings can be given as query parameters or as fields in the JSON body.",
+        "parameters": [
+          {
+            "name": "chunk_size",
+            "in": "query",
+            "required": false,
+            "description": "Maximum tokens per chunk (clamped to 5-8000).",
+            "schema": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 8000,
+              "default": 500
+            },
+            "example": 500
+          },
+          {
+            "name": "overlap",
+            "in": "query",
+            "required": false,
+            "description": "Tokens of overlap between consecutive chunks (clamped to 0-2000; must be smaller than chunk_size).",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2000,
+              "default": 50
+            },
+            "example": 50
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "description": "How to split: exact `tokens`, whole `sentences`, or whole `paragraphs` (blank-line separated).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tokens",
+                "sentences",
+                "paragraphs"
+              ],
+              "default": "tokens"
+            },
+            "example": "sentences"
+          },
+          {
+            "name": "encoding",
+            "in": "query",
+            "required": false,
+            "description": "Tokenizer: `o200k_base` (GPT-4o, GPT-4.1, o-series), `cl100k_base` (GPT-4, GPT-3.5, text-embedding-3), `p50k_base` (Codex, text-davinci), `r50k_base` (GPT-3).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "o200k_base",
+                "cl100k_base",
+                "p50k_base",
+                "r50k_base"
+              ],
+              "default": "o200k_base"
+            },
+            "example": "o200k_base"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Text to chunk.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Input text, max 2,000,000 characters.",
+                    "maxLength": 2000000
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "example": {
+                  "text": "First sentence here. Second sentence follows. A third one ends the paragraph.\n\nNew paragraph starts."
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chunks (example used chunk_size=12, overlap=4, mode=sentences).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chunks"
+                },
+                "example": {
+                  "chunk_size": 12,
+                  "chunks": [
+                    {
+                      "characters": 45,
+                      "index": 0,
+                      "text": "First sentence here. Second sentence follows.",
+                      "tokens": 8
+                    },
+                    {
+                      "characters": 56,
+                      "index": 1,
+                      "text": "Second sentence follows. A third one ends the paragraph.",
+                      "tokens": 11
+                    },
+                    {
+                      "characters": 21,
+                      "index": 2,
+                      "text": "New paragraph starts.",
+                      "tokens": 4
+                    }
+                  ],
+                  "count": 3,
+                  "encoding": "o200k_base",
+                  "mode": "sentences",
+                  "overlap": 4
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 2,000,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 2,000,000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing text, overlap >= chunk_size, or invalid mode/encoding.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "overlap must be smaller than chunk_size"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Tokenizer briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Tokenizer unavailable, retry shortly"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/truncate": {
+      "get": {
+        "operationId": "truncateToTokens",
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Truncate text to a token budget",
+        "description": "Cuts text to at most `max_tokens` tokens, keeping the start or the end, and reports the original and final token counts. Cuts on token boundaries, so the result always fits.",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Input text (max 2,000,000 characters; 413 above that). In a GET query string, keep text within your HTTP client's URL length limit.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "A long prompt that needs to fit in a context window."
+          },
+          {
+            "name": "max_tokens",
+            "in": "query",
+            "required": false,
+            "description": "Token budget (clamped to 1-1,000,000).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1000
+            },
+            "example": 8
+          },
+          {
+            "name": "keep",
+            "in": "query",
+            "required": false,
+            "description": "Keep the `start` (drop the tail) or the `end` (drop the head, useful for chat history).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "start",
+                "end"
+              ],
+              "default": "start"
+            },
+            "example": "start"
+          },
+          {
+            "name": "encoding",
+            "in": "query",
+            "required": false,
+            "description": "Tokenizer: `o200k_base` (GPT-4o, GPT-4.1, o-series), `cl100k_base` (GPT-4, GPT-3.5, text-embedding-3), `p50k_base` (Codex, text-davinci), `r50k_base` (GPT-3).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "o200k_base",
+                "cl100k_base",
+                "p50k_base",
+                "r50k_base"
+              ],
+              "default": "o200k_base"
+            },
+            "example": "o200k_base"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Truncated text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Truncated"
+                },
+                "example": {
+                  "encoding": "o200k_base",
+                  "original_tokens": 12,
+                  "text": "A long prompt that needs to fit in",
+                  "tokens": 8,
+                  "truncated": true
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 2,000,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 2,000,000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "Tokenizer briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Tokenizer unavailable, retry shortly"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clean": {
+      "get": {
+        "operationId": "cleanText",
+        "tags": [
+          "Text prep"
+        ],
+        "summary": "Normalise and clean text for LLMs",
+        "description": "Applies Unicode NFKC normalisation, removes zero-width and bidirectional control characters, collapses runs of spaces and tabs, trims spaces around newlines and limits blank lines to one. Reduces wasted tokens and prompt-injection tricks hidden in invisible characters.",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "description": "Input text (max 2,000,000 characters; 413 above that). In a GET query string, keep text within your HTTP client's URL length limit.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Hello​   world\n\n\n\nBye"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cleaned text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CleanText"
+                },
+                "example": {
+                  "characters": 16,
+                  "text": "Hello world\n\nBye"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/extract-json": {
+      "post": {
+        "operationId": "extractJson",
+        "tags": [
+          "Text prep"
+        ],
+        "summary": "Extract and repair JSON from LLM output",
+        "description": "Finds the first JSON object or array in chatty model output (including inside ```json fences) and parses it. If it is malformed, it repairs common LLM mistakes: trailing commas, single quotes, unquoted keys, // comments, Python True/False/None, and missing closing brackets or quotes. `repaired` tells you whether fixes were needed.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Model output containing JSON.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Input text, max 2,000,000 characters.",
+                    "maxLength": 2000000
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "example": {
+                  "text": "Sure! Here you go:\n```json\n{name: 'Jane', 'age': 30, tags: ['a','b',],}\n```"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Parsed JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractedJson"
+                },
+                "example": {
+                  "json": {
+                    "age": 30,
+                    "name": "Jane",
+                    "tags": [
+                      "a",
+                      "b"
+                    ]
+                  },
+                  "repaired": true,
+                  "valid": true
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 2,000,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 2,000,000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No JSON found, or it could not be repaired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Found JSON-like text but could not repair it"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/to-markdown": {
+      "get": {
+        "operationId": "convertToMarkdown",
+        "tags": [
+          "Text prep"
+        ],
+        "summary": "Convert a URL or HTML to Markdown",
+        "description": "Fetches a web page (or takes raw HTML) and returns clean Markdown of its main content with the title and its o200k_base token count, ready to drop into a prompt. Scripts, styles, navigation, footers and forms are removed. Give `url` or `html`; `url` wins if both are sent.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "description": "Public http(s) page URL (max 2048 characters). Up to 5 redirects are followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri",
+              "maxLength": 2048
+            },
+            "example": "https://en.wikipedia.org/wiki/Large_language_model"
+          },
+          {
+            "name": "html",
+            "in": "query",
+            "required": false,
+            "description": "Raw HTML to convert instead of fetching a URL. Must be URL-encoded; best for small snippets.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "<h1>Intro</h1><p>Hello <b>world</b>.</p><ul><li>One</li><li>Two</li></ul>"
+          },
+          {
+            "name": "max_chars",
+            "in": "query",
+            "required": false,
+            "description": "Maximum characters of Markdown returned (clamped to 500-200000).",
+            "schema": {
+              "type": "integer",
+              "minimum": 500,
+              "maximum": 200000,
+              "default": 50000
+            },
+            "example": 20000
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Markdown output.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Markdown"
+                },
+                "examples": {
+                  "url": {
+                    "summary": "From a URL",
+                    "value": {
+                      "markdown": "This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.",
+                      "title": "Example Domain",
+                      "tokens": 28,
+                      "url": "https://example.com"
+                    }
+                  },
+                  "html": {
+                    "summary": "From HTML (no url field)",
+                    "value": {
+                      "markdown": "# Intro\n\nHello world .\n\n- One\n\n- Two",
+                      "title": "Docs",
+                      "tokens": 11
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "description": "Neither url nor html supplied, or the host does not resolve.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "url or html is required"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (LLMKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (MCP) server for LLMKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"llmkit\": {\n      \"url\": \"https://llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"llmkit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "TokenCount": {
+        "type": "object",
+        "description": "Token count.",
+        "properties": {
+          "encoding": {
+            "type": "string",
+            "description": "Tokenizer used.",
+            "enum": [
+              "o200k_base",
+              "cl100k_base",
+              "p50k_base",
+              "r50k_base"
+            ]
+          },
+          "tokens": {
+            "type": "integer",
+            "description": "Exact token count."
+          },
+          "characters": {
+            "type": "integer",
+            "description": "Characters."
+          },
+          "words": {
+            "type": "integer",
+            "description": "Whitespace-separated words."
+          },
+          "chars_per_token": {
+            "type": "number",
+            "description": "Characters per token (null for empty token list).",
+            "nullable": true
+          },
+          "models": {
+            "type": "string",
+            "description": "Model families that use this encoding."
+          }
+        }
+      },
+      "Chunks": {
+        "type": "object",
+        "description": "Chunks ready for embedding.",
+        "properties": {
+          "encoding": {
+            "type": "string",
+            "description": "Tokenizer used.",
+            "enum": [
+              "o200k_base",
+              "cl100k_base",
+              "p50k_base",
+              "r50k_base"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "description": "Split mode used.",
+            "enum": [
+              "tokens",
+              "sentences",
+              "paragraphs"
+            ]
+          },
+          "chunk_size": {
+            "type": "integer",
+            "description": "Effective max tokens per chunk."
+          },
+          "overlap": {
+            "type": "integer",
+            "description": "Effective overlap in tokens."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of chunks."
+          },
+          "chunks": {
+            "type": "array",
+            "description": "Chunks in document order.",
+            "items": {
+              "type": "object",
+              "description": "Chunk.",
+              "properties": {
+                "index": {
+                  "type": "integer",
+                  "description": "Zero-based position."
+                },
+                "tokens": {
+                  "type": "integer",
+                  "description": "Token count of this chunk."
+                },
+                "characters": {
+                  "type": "integer",
+                  "description": "Character count."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Chunk text."
+                }
+              }
+            }
+          }
+        }
+      },
+      "Truncated": {
+        "type": "object",
+        "description": "Truncation result.",
+        "properties": {
+          "encoding": {
+            "type": "string",
+            "description": "Tokenizer used."
+          },
+          "original_tokens": {
+            "type": "integer",
+            "description": "Tokens before truncation."
+          },
+          "tokens": {
+            "type": "integer",
+            "description": "Tokens after truncation."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True if anything was cut."
+          },
+          "text": {
+            "type": "string",
+            "description": "Resulting text."
+          }
+        }
+      },
+      "CleanText": {
+        "type": "object",
+        "description": "Cleaned text.",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Normalised text."
+          },
+          "characters": {
+            "type": "integer",
+            "description": "Length after cleaning."
+          }
+        }
+      },
+      "ExtractedJson": {
+        "type": "object",
+        "description": "Extracted JSON.",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "Always true on 200."
+          },
+          "repaired": {
+            "type": "boolean",
+            "description": "True if repairs were applied before parsing."
+          },
+          "json": {
+            "description": "The parsed JSON value (object or array)."
+          }
+        }
+      },
+      "Markdown": {
+        "type": "object",
+        "description": "Markdown conversion.",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Final URL after redirects (URL input only).",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "description": "Page title.",
+            "nullable": true
+          },
+          "markdown": {
+            "type": "string",
+            "description": "Markdown of the main content, cut to max_chars."
+          },
+          "tokens": {
+            "type": "integer",
+            "description": "o200k_base token count of `markdown`."
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request: the URL is not http(s), or points to a private, loopback or reserved address.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Private or reserved addresses are not allowed"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "Payload too large: the input exceeds this endpoint's size or item limit.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "max 100 items per request"
+            }
+          }
+        }
+      },
+      "UnsupportedMediaType": {
+        "description": "Unsupported media type: the fetched URL is not an HTML page.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "URL is not an HTML page"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Unprocessable: a required parameter is missing or a value is invalid. The `error` text says which.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "A required parameter is missing or invalid"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
+          }
+        }
+      },
+      "BadGateway": {
+        "description": "Bad gateway: the remote site or upstream service could not be reached, timed out, or returned an error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Fetch failed: ConnectTimeout"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "RapidAPIKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-RapidAPI-Key",
+        "description": "Your RapidAPI key. Also send header X-RapidAPI-Host: llmkit-token-counter-rag-chunker-json-repair.p.rapidapi.com"
+      }
+    }
+  },
+  "security": [
+    {
+      "RapidAPIKey": []
+    }
+  ],
+  "externalDocs": {
+    "description": "RapidAPI listing",
+    "url": "https://rapidapi.com/Olly-1VN9JTXKG/api/llmkit-token-counter-rag-chunker-json-repair"
+  }
+}
