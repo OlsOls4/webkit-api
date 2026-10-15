@@ -1,0 +1,7 @@
+# MCPize upstream access: '<kit> <sha256(token)>'. Each token unlocks MCP tools/call for that one kit only (secret-path /<prefix>/mcp/u/<token> or X-Upstream-Key / Bearer header). Tokens live in the Hark vault, never in git.
+domainkit 625c034e0294d3bf0dc0c07c6b7cab10f179dff52ec3a37a0c45c23b3e5f2c39
+webkit 70f20e3104ae3d60bfa40e5ea01b769f229f050da8a9185749d4cc4e1b9135bf
+geoip 7ca833395d3a41eb8c15960bb8cfce0ab81656286076b817af6b1ec987322267
+phonekit 8c7fb502de1ea5d3325530b5c4c82dfc18b97f2b64f989ec6601851f27068557
+dockit f6b4a92d2360cd0d8c078e9669547ec8d082436c50ccbcbdf2fd7675d499f723
+ukpostcode c557f26b11575baa4c7898b9cd47ded109b4fd75098d38ac225dae6b9379582c
