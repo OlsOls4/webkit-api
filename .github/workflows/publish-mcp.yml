@@ -10,6 +10,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Install mcp-publisher
@@ -22,9 +23,9 @@ jobs:
           for d in mcp-registry/*/; do
             f="$d/server.json"; [ -f "$f" ] || continue
             name=$(jq -r .name "$f"); ver=$(jq -r .version "$f")
-            if curl -sf "https://registry.modelcontextprotocol.io/v0/servers?search=$name" | jq -e --arg n "$name" --arg v "$ver" '[.servers[] | select(.server.name==$n and .server.version==$v)] | length > 0' >/dev/null; then
+            if curl -sf -m 20 --retry 2 "https://registry.modelcontextprotocol.io/v0/servers?search=$name" | jq -e --arg n "$name" --arg v "$ver" '[.servers[] | select(.server.name==$n and .server.version==$v)] | length > 0' >/dev/null; then
               echo "== $name $ver already published, skipping"; continue
             fi
-            echo "== publishing $name $ver"; (cd "$d" && ../../mcp-publisher publish) || { echo "::warning::publish failed for $d"; fail=1; }
+            echo "== publishing $name $ver"; (cd "$d" && timeout 120 ../../mcp-publisher publish) || { echo "::warning::publish failed for $d"; fail=1; }
           done
           exit $fail
