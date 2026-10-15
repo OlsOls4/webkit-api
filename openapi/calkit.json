@@ -717,7 +717,7 @@
             "name": "time",
             "in": "query",
             "required": false,
-            "description": "ISO 8601 date-time, e.g. 2026-10-14T09:30. Without an offset it is read as local time in `from`; with an offset, the offset wins. If omitted the server's current clock time (UTC) is used as the wall time in `from`, so pass an explicit time for exact results.",
+            "description": "ISO 8601 date-time, e.g. 2026-10-14T09:30. Without an offset it is read as local time in `from`; with an offset, the offset wins. If omitted, the current time in `from` is used.",
             "schema": {
               "type": "string",
               "format": "date-time"
