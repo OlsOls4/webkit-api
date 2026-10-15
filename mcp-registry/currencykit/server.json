@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.OlsOls4/currencykit",
+  "title": "CurrencyKit",
+  "description": "ECB euro reference exchange rates: latest, historical, time series and currency conversion",
+  "repository": {
+    "url": "https://github.com/OlsOls4/webkit-api",
+    "source": "github"
+  },
+  "version": "1.1.0",
+  "websiteUrl": "https://rapidapi.com/Olly-1VN9JTXKG/api/currencykit-ecb-exchange-rates-currency-converter",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com/mcp",
+      "headers": [
+        {
+          "name": "X-RapidAPI-Key",
+          "description": "Your RapidAPI key (subscribe to CurrencyKit on RapidAPI; free plan available)",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "X-RapidAPI-Host",
+          "description": "RapidAPI host for this API",
+          "isRequired": true,
+          "default": "currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com",
+          "choices": [
+            "currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com"
+          ]
+        }
+      ]
+    }
+  ]
+}
