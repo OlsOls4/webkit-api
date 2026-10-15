@@ -1,0 +1,732 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "DocKit - PDF Text Extraction & Markdown to PDF",
+    "version": "1.1.0",
+    "description": "# DocKit: PDF Text Extraction and Markdown to PDF\n\nRead PDFs and write PDFs over a simple REST API: get page counts and metadata, extract text page by page, and turn Markdown or plain text into clean A4 PDFs, returned as a file or base64.\n\n**Who it's for:** developers automating invoices and reports, document-ingestion and RAG pipelines, no-code workflows (Zapier, Make, n8n) and back-office tools.\n\n## Use cases\n- Extract text from supplier PDFs for search, RAG or LLM summarisation.\n- Check page counts before printing or charging per page.\n- Generate invoices, receipts and reports from Markdown templates.\n- Export chatbot or AI-written Markdown as a downloadable PDF.\n- Archive form submissions as PDFs.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com/pdf/info?url=https%3A%2F%2Fwww.w3.org%2FWAI%2FER%2Ftests%2Fxhtml%2Ftestfiles%2Fresources%2Fpdf%2Fdummy.pdf' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- PDF input is read from a public URL (max 10 MB, 15 s download timeout, redirects not followed).\n- Text extraction needs a text layer; scanned PDFs need OCR first.\n- Generated PDFs use the built-in Helvetica font, which covers Latin-1 characters only.\n- Generation input limit is 200,000 characters.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `400` disallowed URL (not http/https, or a private address), `413` input too large, `422` missing or invalid parameter, `502` upstream site or service failed. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- PDF parsing with pypdf (BSD licence); PDF generation with fpdf2 (LGPL 3.0); Markdown conversion with Python-Markdown (BSD licence).\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    },
+    "x-rapidapi-host": "dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com"
+  },
+  "servers": [
+    {
+      "url": "https://dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com",
+      "description": "RapidAPI gateway (subscribe on RapidAPI; a free plan is available)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "PDF reading",
+      "description": "Metadata and text extraction from PDFs at a URL."
+    },
+    {
+      "name": "PDF generation",
+      "description": "Create PDFs from Markdown or plain text."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
+  "paths": {
+    "/pdf/info": {
+      "get": {
+        "operationId": "getPdfInfo",
+        "tags": [
+          "PDF reading"
+        ],
+        "summary": "Get PDF metadata and page count",
+        "description": "Downloads a PDF from a URL and returns its page count, encryption flag and document metadata (title, author, subject, creator, producer, dates) without extracting text.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public URL that serves the PDF directly (http/https, max 10 MB). Redirects are not followed, so use the final URL. Private and reserved addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PdfInfo"
+                },
+                "example": {
+                  "author": "Evangelos Vlachogiannis",
+                  "created": "D:20070223175637+02'00'",
+                  "creator": "Writer",
+                  "encrypted": false,
+                  "modified": null,
+                  "pages": 1,
+                  "producer": "OpenOffice.org 2.1",
+                  "subject": null,
+                  "title": null
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "PDF larger than 10 MB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "PDF max 10 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing URL, not a PDF, unreadable, or (for text) encrypted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Not a PDF file"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The PDF URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pdf/text": {
+      "get": {
+        "operationId": "extractPdfText",
+        "tags": [
+          "PDF reading"
+        ],
+        "summary": "Extract text from a PDF",
+        "description": "Downloads a PDF from a URL and extracts its text layer, returning the full text, per-page text, word count and metadata. Works on digitally created PDFs; scanned images without a text layer return empty text (no OCR).",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public URL that serves the PDF directly (http/https, max 10 MB). Redirects are not followed, so use the final URL. Private and reserved addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+          },
+          {
+            "name": "max_pages",
+            "in": "query",
+            "required": false,
+            "description": "Maximum pages to extract, from the first page (clamped to 1-200).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "example": 50
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Extracted text and metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PdfText"
+                },
+                "example": {
+                  "author": "Evangelos Vlachogiannis",
+                  "created": "D:20070223175637+02'00'",
+                  "creator": "Writer",
+                  "encrypted": false,
+                  "modified": null,
+                  "page_texts": [
+                    "Dummy PDF file"
+                  ],
+                  "pages": 1,
+                  "pages_extracted": 1,
+                  "producer": "OpenOffice.org 2.1",
+                  "subject": null,
+                  "text": "Dummy PDF file",
+                  "title": null,
+                  "words": 3
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "PDF larger than 10 MB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "PDF max 10 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing URL, not a PDF, unreadable, or (for text) encrypted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Not a PDF file"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The PDF URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/markdown-to-pdf": {
+      "post": {
+        "operationId": "markdownToPdf",
+        "tags": [
+          "PDF generation"
+        ],
+        "summary": "Convert Markdown to PDF",
+        "description": "Renders Markdown (headings, bold/italic, lists, links, tables and fenced code) to an A4 PDF in Helvetica 11 pt with automatic page breaks. Ideal for invoices, reports, receipts and exporting AI-generated content. Characters outside Latin-1 (e.g. emoji, CJK) are replaced with `?`.",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Response type: omit (or any value other than `base64`) for the binary PDF; `base64` for JSON with a data URI.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pdf",
+                "base64"
+              ],
+              "default": "pdf"
+            },
+            "example": "pdf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Markdown to render.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Markdown source. Max 200,000 characters.",
+                    "maxLength": 200000
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Optional PDF metadata title (shown in viewer title bars; not printed on the page)."
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "example": {
+                  "text": "# Invoice\n\n**Total:** 120.00\n\n- Item one\n- Item two",
+                  "title": "Invoice"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The generated A4 PDF (`Content-Disposition: inline; filename=\"document.pdf\"`), or JSON when `format=base64`.",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PdfBase64"
+                },
+                "example": {
+                  "data_uri": "data:application/pdf;base64,JVBERi0xLjMKJenr8b8KMSAwIG9iago8PAovQ291bnQg...",
+                  "mime": "application/pdf",
+                  "size": 1406
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 200,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 200,000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing text or rendering failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Provide text (JSON {\"text\": ...}, form or query)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/text-to-pdf": {
+      "post": {
+        "operationId": "textToPdf",
+        "tags": [
+          "PDF generation"
+        ],
+        "summary": "Convert plain text to PDF",
+        "description": "Lays out plain text on A4 pages in Helvetica 11 pt, wrapping long lines and preserving line breaks. Characters outside Latin-1 are replaced with `?`.",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Response type: omit (or any value other than `base64`) for the binary PDF; `base64` for JSON with a data URI.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pdf",
+                "base64"
+              ],
+              "default": "pdf"
+            },
+            "example": "pdf"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Text to render.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Plain text. Max 200,000 characters.",
+                    "maxLength": 200000
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Optional PDF metadata title (shown in viewer title bars; not printed on the page)."
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "example": {
+                  "text": "Hello world",
+                  "title": "Note"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The generated A4 PDF (`Content-Disposition: inline; filename=\"document.pdf\"`), or JSON when `format=base64`.",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PdfBase64"
+                },
+                "example": {
+                  "data_uri": "data:application/pdf;base64,JVBERi0xLjMKJenr8b8KMSAwIG9iago8PAovQ291bnQg...",
+                  "mime": "application/pdf",
+                  "size": 992
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Text longer than 200,000 characters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "text max 200,000 characters"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing text or rendering failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Provide text (JSON {\"text\": ...}, form or query)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (DocKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (MCP) server for DocKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"dockit\": {\n      \"url\": \"https://dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"dockit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "PdfInfo": {
+        "type": "object",
+        "description": "PDF metadata.",
+        "properties": {
+          "pages": {
+            "type": "integer",
+            "description": "Total page count."
+          },
+          "encrypted": {
+            "type": "boolean",
+            "description": "PDF is encrypted (text extraction is refused for encrypted files)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Document title from metadata.",
+            "nullable": true
+          },
+          "author": {
+            "type": "string",
+            "description": "Author.",
+            "nullable": true
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject.",
+            "nullable": true
+          },
+          "creator": {
+            "type": "string",
+            "description": "Application that created the original document.",
+            "nullable": true
+          },
+          "producer": {
+            "type": "string",
+            "description": "Library that produced the PDF.",
+            "nullable": true
+          },
+          "created": {
+            "type": "string",
+            "description": "Creation date as stored in the PDF (PDF date syntax, e.g. D:20070223175637+02'00').",
+            "nullable": true
+          },
+          "modified": {
+            "type": "string",
+            "description": "Modification date in PDF date syntax.",
+            "nullable": true
+          }
+        }
+      },
+      "PdfText": {
+        "type": "object",
+        "description": "Extracted PDF text with metadata.",
+        "properties": {
+          "pages": {
+            "type": "integer",
+            "description": "Total page count."
+          },
+          "encrypted": {
+            "type": "boolean",
+            "description": "PDF is encrypted (text extraction is refused for encrypted files)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Document title from metadata.",
+            "nullable": true
+          },
+          "author": {
+            "type": "string",
+            "description": "Author.",
+            "nullable": true
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject.",
+            "nullable": true
+          },
+          "creator": {
+            "type": "string",
+            "description": "Application that created the original document.",
+            "nullable": true
+          },
+          "producer": {
+            "type": "string",
+            "description": "Library that produced the PDF.",
+            "nullable": true
+          },
+          "created": {
+            "type": "string",
+            "description": "Creation date as stored in the PDF (PDF date syntax, e.g. D:20070223175637+02'00').",
+            "nullable": true
+          },
+          "modified": {
+            "type": "string",
+            "description": "Modification date in PDF date syntax.",
+            "nullable": true
+          },
+          "pages_extracted": {
+            "type": "integer",
+            "description": "Pages whose text was extracted (up to `max_pages`)."
+          },
+          "words": {
+            "type": "integer",
+            "description": "Word count of `text`."
+          },
+          "text": {
+            "type": "string",
+            "description": "Text of all extracted pages, pages separated by blank lines."
+          },
+          "page_texts": {
+            "type": "array",
+            "description": "Text per extracted page, in order.",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PdfBase64": {
+        "type": "object",
+        "description": "Returned when `format=base64`.",
+        "properties": {
+          "mime": {
+            "type": "string",
+            "description": "Always application/pdf.",
+            "enum": [
+              "application/pdf"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "description": "PDF size in bytes."
+          },
+          "data_uri": {
+            "type": "string",
+            "description": "`data:application/pdf;base64,...`."
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request: the URL is not http(s), or points to a private, loopback or reserved address.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Private or reserved addresses are not allowed"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "RapidAPIKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-RapidAPI-Key",
+        "description": "Your RapidAPI key. Also send header X-RapidAPI-Host: dockit-pdf-text-extraction-markdown-to-pdf.p.rapidapi.com"
+      }
+    }
+  },
+  "security": [
+    {
+      "RapidAPIKey": []
+    }
+  ],
+  "externalDocs": {
+    "description": "RapidAPI listing",
+    "url": "https://rapidapi.com/Olly-1VN9JTXKG/api/dockit-pdf-text-extraction-markdown-to-pdf"
+  }
+}
