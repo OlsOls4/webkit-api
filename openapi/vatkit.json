@@ -1,0 +1,740 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "VATKit - EU VAT Number Check (VIES) & VAT Rates",
+    "version": "1.1.0",
+    "description": "# VATKit: EU VAT Number Validation (VIES) and VAT Rates API\n\nCheck EU VAT numbers live against the European Commission's VIES service and get the registered company name and address, validate EU and UK VAT number formats offline, look up EU VAT rates, and see which national databases are up. Clean JSON instead of VIES's quirks.\n\n**Who it's for:** B2B e-commerce and SaaS billing (reverse charge), invoicing and accounting software, marketplaces onboarding EU sellers, KYB and compliance teams.\n\n## Use cases\n- Apply the reverse charge only after the buyer's VAT number checks out in VIES.\n- Auto-fill company name and address in B2B signup forms.\n- Keep a VIES consultation number as audit evidence for zero-rated intra-EU supplies.\n- Catch typos instantly in checkout forms with /format.\n- Charge the right standard rate per country for OSS sales.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com/check?vat=IE6388047V' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- VIES answers come live from national databases, which are sometimes down or busy. Those cases return `503` with `error_code` (e.g. `MS_UNAVAILABLE`) and `retryable: true`; check /status or retry later.\n- Germany and Spain (among others) do not disclose name or address via VIES; `name` and `address` are then null even for a valid number.\n- UK (GB) VAT numbers are not in VIES since Brexit; /format validates them offline. Northern Ireland goods traders use the XI prefix, which VIES checks.\n- VAT rates are a maintained table of the European Commission's published rates (see `as_of`); regional rates (Canary Islands, Azores, Madeira and so on) are not included.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `422` missing or invalid parameter, `503` temporarily unavailable, retry shortly. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- VAT number checks: European Commission VIES (VAT Information Exchange System) REST service, https://ec.europa.eu/taxation_customs/vies/. Answers come live from each member state's database.\n- VAT rates: European Commission, Your Europe 'VAT rules and rates' table (https://europa.eu/youreurope/business/taxation/vat/vat-rules-rates/index_en.htm), maintained as a static table; `as_of` gives the date it reflects.\n- Format and check-digit rules: python-stdnum (LGPL-2.1).\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app/vat"
+    }
+  ],
+  "tags": [
+    {
+      "name": "VAT numbers",
+      "description": "Live VIES checks, offline format validation and VIES status."
+    },
+    {
+      "name": "VAT rates",
+      "description": "EU VAT rates by member state."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
+  "paths": {
+    "/check": {
+      "get": {
+        "operationId": "checkVatNumber",
+        "tags": [
+          "VAT numbers"
+        ],
+        "summary": "Check an EU VAT number live in VIES",
+        "description": "Checks a VAT number against the European Commission's VIES service in real time and returns whether it is registered for intra-EU trade, with the trader's name and address when the member state discloses them. Pass `requester_vat` (your own EU VAT number) to also get a VIES consultation number, which is proof of the check for tax audits. Also returns an offline `format_valid` result. UK (GB) numbers are not in VIES; Northern Ireland goods traders use the XI prefix.",
+        "parameters": [
+          {
+            "name": "vat",
+            "in": "query",
+            "required": true,
+            "description": "VAT number with its 2-letter country prefix, e.g. IE6388047V. Spaces, dots and dashes are ignored. Greece uses EL (GR is accepted).",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 30
+            },
+            "example": "IE6388047V"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "Optional country prefix, if `vat` is passed without one (e.g. country=IE&vat=6388047V). A matching prefix inside `vat` is tolerated.",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "example": "IE"
+          },
+          {
+            "name": "requester_vat",
+            "in": "query",
+            "required": false,
+            "description": "Optional: your own EU VAT number with prefix. When given, VIES returns a `consultation_number` you can keep as evidence of the check.",
+            "schema": {
+              "type": "string",
+              "maxLength": 30
+            },
+            "example": "IE6388047V"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "VIES result. `valid` false means not registered for intra-EU trade.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VatCheck"
+                },
+                "example": {
+                  "address": "3RD FLOOR, GORDON HOUSE, BARROW STREET, DUBLIN 4",
+                  "address_lines": [
+                    "3RD FLOOR, GORDON HOUSE, BARROW STREET, DUBLIN 4"
+                  ],
+                  "consultation_number": null,
+                  "country": "Ireland",
+                  "country_code": "IE",
+                  "format_error": null,
+                  "format_valid": true,
+                  "name": "GOOGLE IRELAND LIMITED",
+                  "note": "Some member states (e.g. DE, ES) never return name or address through VIES; null then means 'not disclosed', not 'unknown company'.",
+                  "number": "6388047V",
+                  "request_date": "2026-10-15T13:45:59.689Z",
+                  "source": "European Commission VIES (VAT Information Exchange System), https://ec.europa.eu/taxation_customs/vies/",
+                  "valid": true,
+                  "vat_number": "IE6388047V"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Missing or malformed number, or a country that is not in VIES (e.g. GB, US).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "US is not an EU VIES country code. Supported: AT, BE, BG, CY, CZ, DE, DK, EE, EL, ES, FI, FR, HR, HU, IE, IT, LT, LU, LV, MT, NL, PL, PT, RO, SE, SI, SK, XI"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "VIES or the member state's database is temporarily unavailable (e.g. MS_UNAVAILABLE, MS_MAX_CONCURRENT_REQ, TIMEOUT). `error_code` gives the VIES reason; retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "The member state's VAT database is temporarily unavailable (MS_UNAVAILABLE). Retry in a few seconds or minutes.",
+                  "error_code": "MS_UNAVAILABLE",
+                  "country_code": "DE",
+                  "retryable": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/format": {
+      "get": {
+        "operationId": "validateVatFormat",
+        "tags": [
+          "VAT numbers"
+        ],
+        "summary": "Validate a VAT number's format offline",
+        "description": "Checks length, structure and check digits for EU (27 member states + XI) and UK (GB) VAT numbers without contacting VIES. Instant, never rate-limited by tax authorities; use it to catch typos in forms before calling /check.",
+        "parameters": [
+          {
+            "name": "vat",
+            "in": "query",
+            "required": true,
+            "description": "VAT number with prefix, e.g. FR40303265045 or GB980780684.",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 30
+            },
+            "example": "FR40303265045"
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "Optional country prefix, if `vat` is passed without one (e.g. country=IE&vat=6388047V). A matching prefix inside `vat` is tolerated.",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "example": "FR"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Format result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VatFormat"
+                },
+                "example": {
+                  "checks_checksum": true,
+                  "country": "France",
+                  "country_code": "FR",
+                  "error": null,
+                  "format_valid": true,
+                  "input": "FR40303265045",
+                  "note": "Offline check of length, structure and check digits only. Use /check to confirm the number is actually registered.",
+                  "number": "40303265045",
+                  "vat_number": "FR40303265045"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Missing number or unsupported country prefix.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "US is not a supported country prefix. Supported: AT, BE, ..."
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/rates": {
+      "get": {
+        "operationId": "getVatRates",
+        "tags": [
+          "VAT rates"
+        ],
+        "summary": "Get EU VAT rates by country",
+        "description": "Returns standard, reduced, super-reduced and parking VAT rates for one EU member state, or all 27 when `country` is omitted. From a maintained table of the European Commission's published rates; `as_of` gives the date it reflects.",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "Optional EU country code, e.g. DE, FR, EL (GR accepted). Omit for all 27.",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "example": "DE"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rates for one country (or all, as `rates`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VatRatesResponse"
+                },
+                "example": {
+                  "as_of": "2026-07-13",
+                  "country": "Germany",
+                  "country_code": "DE",
+                  "currency": "EUR",
+                  "iso_country_code": "DE",
+                  "parking_rate": null,
+                  "reduced_rates": [
+                    7
+                  ],
+                  "source": "European Commission, Your Europe: VAT rates applied in EU member countries (https://europa.eu/youreurope/business/taxation/vat/vat-rules-rates/index_en.htm). Regional rates (e.g. Canary Islands, Azores, Madeira) are not included; see the EC Taxes in Europe database for detail.",
+                  "standard_rate": 19,
+                  "super_reduced_rate": null,
+                  "unit": "percent",
+                  "zero_rate": false
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Not an EU member state code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "country must be an EU member state code, e.g. DE, FR, EL (or GR)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "operationId": "getViesStatus",
+        "tags": [
+          "VAT numbers"
+        ],
+        "summary": "Check VIES availability by country",
+        "description": "Shows whether VIES and each member state's VAT database are currently available, so you can decide to retry or fall back to /format.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Availability (example trimmed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViesStatus"
+                },
+                "example": {
+                  "countries": [
+                    {
+                      "availability": "Available",
+                      "available": true,
+                      "country": "Austria",
+                      "country_code": "AT"
+                    },
+                    {
+                      "availability": "Available",
+                      "available": true,
+                      "country": "Belgium",
+                      "country_code": "BE"
+                    },
+                    {
+                      "availability": "Available",
+                      "available": true,
+                      "country": "Bulgaria",
+                      "country_code": "BG"
+                    }
+                  ],
+                  "source": "European Commission VIES (VAT Information Exchange System), https://ec.europa.eu/taxation_customs/vies/",
+                  "unavailable": [],
+                  "vies_available": true
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "VIES or the member state's database is temporarily unavailable (e.g. MS_UNAVAILABLE, MS_MAX_CONCURRENT_REQ, TIMEOUT). `error_code` gives the VIES reason; retry later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "VIES status could not be retrieved, retry shortly",
+                  "error_code": "VIES_UNREACHABLE",
+                  "retryable": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (VATKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (MCP) server for VATKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"vatkit\": {\n      \"url\": \"https://vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"vatkit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "VatCheck": {
+        "type": "object",
+        "description": "Live VIES check.",
+        "properties": {
+          "vat_number": {
+            "type": "string",
+            "description": "Normalised number with prefix."
+          },
+          "country_code": {
+            "type": "string",
+            "description": "VIES country code (EL for Greece, XI for Northern Ireland)."
+          },
+          "country": {
+            "type": "string",
+            "description": "Country name."
+          },
+          "number": {
+            "type": "string",
+            "description": "Number without prefix."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Registered and active for intra-EU transactions, per VIES."
+          },
+          "name": {
+            "type": "string",
+            "description": "Registered trader name (null if not valid or not disclosed by the member state).",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "description": "Registered address on one line.",
+            "nullable": true
+          },
+          "address_lines": {
+            "type": "array",
+            "description": "Address split into lines, as supplied by the member state.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "request_date": {
+            "type": "string",
+            "description": "Timestamp of the VIES check (UTC).",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "consultation_number": {
+            "type": "string",
+            "description": "VIES consultation number (only when `requester_vat` was given).",
+            "nullable": true
+          },
+          "format_valid": {
+            "type": "boolean",
+            "description": "Offline structure/check-digit result."
+          },
+          "format_error": {
+            "type": "string",
+            "description": "Why the format failed, if it did.",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "Disclosure caveat."
+          },
+          "source": {
+            "type": "string",
+            "description": "Data source."
+          }
+        }
+      },
+      "VatFormat": {
+        "type": "object",
+        "description": "Offline format check.",
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Input as given."
+          },
+          "vat_number": {
+            "type": "string",
+            "description": "Normalised number with prefix."
+          },
+          "country_code": {
+            "type": "string",
+            "description": "Country prefix."
+          },
+          "country": {
+            "type": "string",
+            "description": "Country name."
+          },
+          "number": {
+            "type": "string",
+            "description": "Number without prefix."
+          },
+          "format_valid": {
+            "type": "boolean",
+            "description": "Structure and check digits are valid."
+          },
+          "error": {
+            "type": "string",
+            "description": "invalid length, invalid checksum, invalid format or invalid component.",
+            "nullable": true
+          },
+          "checks_checksum": {
+            "type": "boolean",
+            "description": "Check digits are verified where the country defines them."
+          },
+          "note": {
+            "type": "string",
+            "description": "Reminder that this is offline."
+          }
+        }
+      },
+      "VatRatesResponse": {
+        "type": "object",
+        "description": "One country's rates, or all countries' rates in `rates` (plus `count`) when no country is given.",
+        "properties": {
+          "country_code": {
+            "type": "string",
+            "description": "VIES country code (EL for Greece, XI for Northern Ireland)."
+          },
+          "iso_country_code": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 code (GR for Greece)."
+          },
+          "country": {
+            "type": "string",
+            "description": "Country name."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Local currency (ISO 4217)."
+          },
+          "standard_rate": {
+            "type": "number",
+            "description": "Standard rate, percent."
+          },
+          "reduced_rates": {
+            "type": "array",
+            "description": "Reduced rates, percent (may be empty).",
+            "items": {
+              "type": "number"
+            }
+          },
+          "super_reduced_rate": {
+            "type": "number",
+            "description": "Super-reduced rate (<5%), percent.",
+            "nullable": true
+          },
+          "parking_rate": {
+            "type": "number",
+            "description": "Parking (intermediate) rate, percent.",
+            "nullable": true
+          },
+          "zero_rate": {
+            "type": "boolean",
+            "description": "Country applies a zero rate to some supplies."
+          },
+          "as_of": {
+            "type": "string",
+            "description": "Date the rate table reflects.",
+            "format": "date"
+          },
+          "source": {
+            "type": "string",
+            "description": "Source of the rates."
+          },
+          "unit": {
+            "type": "string",
+            "description": "Always 'percent'."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of countries (list form only)."
+          },
+          "rates": {
+            "type": "array",
+            "description": "All countries (list form only).",
+            "items": {
+              "type": "object",
+              "description": "Country rates.",
+              "properties": {
+                "country_code": {
+                  "type": "string",
+                  "description": "VIES country code (EL for Greece, XI for Northern Ireland)."
+                },
+                "iso_country_code": {
+                  "type": "string",
+                  "description": "ISO 3166-1 alpha-2 code (GR for Greece)."
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Country name."
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "Local currency (ISO 4217)."
+                },
+                "standard_rate": {
+                  "type": "number",
+                  "description": "Standard rate, percent."
+                },
+                "reduced_rates": {
+                  "type": "array",
+                  "description": "Reduced rates, percent (may be empty).",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "super_reduced_rate": {
+                  "type": "number",
+                  "description": "Super-reduced rate (<5%), percent.",
+                  "nullable": true
+                },
+                "parking_rate": {
+                  "type": "number",
+                  "description": "Parking (intermediate) rate, percent.",
+                  "nullable": true
+                },
+                "zero_rate": {
+                  "type": "boolean",
+                  "description": "Country applies a zero rate to some supplies."
+                }
+              }
+            }
+          }
+        }
+      },
+      "ViesStatus": {
+        "type": "object",
+        "description": "VIES availability.",
+        "properties": {
+          "vies_available": {
+            "type": "boolean",
+            "description": "VIES itself is up."
+          },
+          "unavailable": {
+            "type": "array",
+            "description": "Country codes currently unavailable.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "countries": {
+            "type": "array",
+            "description": "Per-country availability.",
+            "items": {
+              "type": "object",
+              "description": "Country status.",
+              "properties": {
+                "country_code": {
+                  "type": "string",
+                  "description": "VIES country code (EL for Greece, XI for Northern Ireland)."
+                },
+                "country": {
+                  "type": "string",
+                  "description": "Country name.",
+                  "nullable": true
+                },
+                "available": {
+                  "type": "boolean",
+                  "description": "Database answering."
+                },
+                "availability": {
+                  "type": "string",
+                  "description": "Raw VIES status, e.g. Available, Unavailable, Monitoring Disabled."
+                }
+              }
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "Data source."
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
+          }
+        }
+      }
+    }
+  }
+}
