@@ -1,0 +1,916 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "DomainKit - DNS, SSL, WHOIS & Website Tech Lookup",
+    "version": "1.1.0",
+    "description": "# DomainKit: DNS, SSL, WHOIS and Website Tech Lookup\n\nEverything you want to know about a domain in four calls: live DNS records with SPF/DMARC, the TLS certificate and its expiry, registration data and domain age, and the technologies and security headers of its website.\n\n**Who it's for:** security teams, SEO and marketing tools, sales-intelligence products, hosting dashboards and fraud teams.\n\n## Use cases\n- Alert before SSL certificates expire using `days_remaining`.\n- Score signups or leads by domain age (new domains are riskier).\n- Audit SPF and DMARC before sending email on a customer's behalf.\n- Identify a prospect's CMS, framework and analytics stack for sales outreach.\n- Grade a site's security headers in a pentest or compliance report.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com/ssl?domain=github.com' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- All lookups are live; nothing is cached, so results reflect the moment of the request.\n- The `domain` parameter accepts bare domains or full URLs; subdomains work for /dns, /ssl and /scan.\n- WHOIS uses the IANA RDAP bootstrap registry; for TLDs without RDAP it falls back to port-43 WHOIS and marks the result with `source: whois`.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `400` disallowed URL (not http/https, or a private address), `404` not found, `422` missing or invalid parameter, `502` upstream site or service failed, `503` temporarily unavailable, retry shortly. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Live DNS resolution, TLS handshakes and HTTPS requests made at request time.\n- Registration data from the authoritative registries' RDAP services (IANA bootstrap) and WHOIS servers.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    },
+    "x-rapidapi-host": "domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com"
+  },
+  "servers": [
+    {
+      "url": "https://domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com",
+      "description": "RapidAPI gateway (subscribe on RapidAPI; a free plan is available)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "DNS",
+      "description": "DNS records and email authentication (SPF, DMARC)."
+    },
+    {
+      "name": "SSL",
+      "description": "TLS certificate inspection and expiry."
+    },
+    {
+      "name": "WHOIS",
+      "description": "Domain registration data and age via RDAP/WHOIS."
+    },
+    {
+      "name": "Website",
+      "description": "Technology fingerprinting and security headers."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
+  "paths": {
+    "/dns": {
+      "get": {
+        "operationId": "getDnsRecords",
+        "tags": [
+          "DNS"
+        ],
+        "summary": "Look up DNS records",
+        "description": "Resolves the requested record types (default A, AAAA, MX, NS, TXT, CNAME, SOA) and summarises email security: the SPF record, the DMARC policy and whether MX exists. Use it for domain onboarding checks, email deliverability audits and monitoring.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "required": true,
+            "description": "Domain name such as example.com. A full URL is accepted: the scheme, path and port are stripped and the value is lower-cased.",
+            "schema": {
+              "type": "string",
+              "maxLength": 253
+            },
+            "example": "github.com"
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated record types. Allowed: A, AAAA, MX, NS, TXT, CNAME, SOA, CAA (case-insensitive). Any other type returns 422.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z]+(,[A-Za-z]+)*$",
+              "default": "A,AAAA,MX,NS,TXT,CNAME,SOA"
+            },
+            "example": "A,MX,TXT,NS"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DNS records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DnsResult"
+                },
+                "example": {
+                  "domain": "github.com",
+                  "email_security": {
+                    "dmarc": "v=DMARC1; p=quarantine; sp=reject; pct=100; rua=mailto:dmarc@github.com; ruf=mailto:dmarc@github.com; fo=1",
+                    "has_mx": true,
+                    "spf": "v=spf1 ip4:192.30.252.0/22 include:spf.protection.outlook.com include:_netblocks.google.com include:_netblocks2.google.com include:mail.zendesk.com include:_spf.salesforce.com include:servers.mcsv.net include:mktomail.com include:sendgrid.net ip4:62.253.227.114 ip4:166.78.69.169 ip4:166.78.69.170 ip4:166.78.71.131 ~all"
+                  },
+                  "records": {
+                    "A": [
+                      "20.29.134.23"
+                    ],
+                    "MX": [
+                      {
+                        "host": "github-com.mail.protection.outlook.com",
+                        "priority": 0
+                      }
+                    ],
+                    "NS": [
+                      "dns1.p08.nsone.net",
+                      "dns2.p08.nsone.net",
+                      "dns3.p08.nsone.net",
+                      "dns4.p08.nsone.net",
+                      "ns-1283.awsdns-32.org",
+                      "ns-1707.awsdns-21.co.uk",
+                      "ns-421.awsdns-52.com",
+                      "ns-520.awsdns-01.net"
+                    ],
+                    "TXT": [
+                      "00Dd0000000hHE0=1TBKg000000TN2r",
+                      "MS=6BF03E6AF5CB689E315FB6199603BABF2C88D805",
+                      "MS=ms44452932",
+                      "MS=ms58704441",
+                      "TAILSCALE-xOzoDvFUzZr5YYVCQFuD",
+                      "adobe-idp-site-verification=b92c9e999aef825edc36e0a3d847d2dbad5b2fc0e05c79ddd7a16139b48ecf4b",
+                      "anthropic-domain-verification-4az7qn=if8YWuRRqwLycGJDooumzHtxm",
+                      "apple-domain-verification=RyQhdzTl6Z6x8ZP4",
+                      "atlassian-domain-verification=jjgw98AKv2aeoYFxiL/VFaoyPkn3undEssTRuMg6C/3Fp/iqhkV4HVV7WjYlVeF8",
+                      "calendly-site-verification=at0DQARi7IZvJtXQAWhMqpmIzpvoBNF7aam5VKKxP",
+                      "cursor-domain-verification-gtfwmt=1rfLOtiTngX5QSxD5HvNKTvm3",
+                      "docusign=087098e3-3d46-47b7-9b4e-8a23028154cd",
+                      "facebook-domain-verification=39xu4jzl7roi7x0n93ldkxjiaarx50",
+                      "google-site-verification=82Le34Flgtd15ojYhHlGF_6g72muSjamlMVThBOJpks",
+                      "google-site-verification=UTM-3akMgubp6tQtgEuAkYNYLyYAvpTnnSrDMWoDR3o",
+                      "jamf-site-verification=XtaPNIYghF_e_xRDI8CjgQ",
+                      "krisp-domain-verification=ZlyiK7XLhnaoUQb2hpak1PLY7dFkl1WE",
+                      "loom-site-verification=f3787154f1154b7880e720a511ea664d",
+                      "miro-verification=d2e174fdb00c71e0bcf58f8e58c3da2dd80dcfa9",
+                      "openai-domain-verification=dv-3nh33eQwdkotMIAzLrIDVZo1",
+                      "serval-domain-verification-ydryhj=qbkiEakpwEpTvHh5fIiCqtaue",
+                      "shopify-verification-code=t1YPwcmvnxZyBycaCpk1MPyWoFs72o",
+                      "stripe-verification=f88ef17321660a01bab1660454192e014defa29ba7b8de9633c69d6b4912217f",
+                      "v=spf1 ip4:192.30.252.0/22 include:spf.protection.outlook.com include:_netblocks.google.com include:_netblocks2.google.com include:mail.zendesk.com include:_spf.salesforce.com include:servers.mcsv.net include:mktomail.com include:sendgrid.net ip4:62.253.227.114 ip4:166.78.69.169 ip4:166.78.69.170 ip4:166.78.71.131 ~all"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/ssl": {
+      "get": {
+        "operationId": "getSslCertificate",
+        "tags": [
+          "SSL"
+        ],
+        "summary": "Check a domain's SSL/TLS certificate",
+        "description": "Connects to the domain on port 443 and returns certificate issuer, subject, SANs, validity dates, days until expiry, serial, TLS version and cipher. If verification fails (expired, self-signed, wrong host) you get `valid: false` with the reason instead of an error. Errors: `422` invalid or unresolvable domain, `400` private address, `502` could not connect within 6 seconds.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "required": true,
+            "description": "Domain name such as example.com. A full URL is accepted: the scheme, path and port are stripped and the value is lower-cased.",
+            "schema": {
+              "type": "string",
+              "maxLength": 253
+            },
+            "example": "github.com"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certificate details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SslResult"
+                },
+                "example": {
+                  "cipher": "TLS_AES_128_GCM_SHA256",
+                  "days_remaining": 46,
+                  "domain": "github.com",
+                  "issuer": {
+                    "commonName": "Sectigo Public Server Authentication CA DV E36",
+                    "countryName": "GB",
+                    "organizationName": "Sectigo Limited"
+                  },
+                  "protocol": "TLSv1.3",
+                  "san": [
+                    "github.com",
+                    "www.github.com"
+                  ],
+                  "serial_number": "A59EBDB596751DB7F5C095079613953C",
+                  "subject": {
+                    "commonName": "github.com"
+                  },
+                  "valid": true,
+                  "valid_from": "2026-09-01T00:00:00+00:00",
+                  "valid_to": "2026-11-29T23:59:59+00:00"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        }
+      }
+    },
+    "/whois": {
+      "get": {
+        "operationId": "getWhois",
+        "tags": [
+          "WHOIS"
+        ],
+        "summary": "WHOIS/RDAP lookup and domain age",
+        "description": "Returns registrar, creation, update and expiry dates, domain age in days, EPP status and name servers using the registry's RDAP service, with automatic fallback to classic WHOIS. Errors: `404` domain not registered (or TLD has no RDAP/WHOIS), `502` registry error, `503` registry is rate-limiting, retry shortly.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "required": true,
+            "description": "Domain name such as example.com. A full URL is accepted: the scheme, path and port are stripped and the value is lower-cased.",
+            "schema": {
+              "type": "string",
+              "maxLength": 253
+            },
+            "example": "github.com"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registration data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhoisResult"
+                },
+                "example": {
+                  "created": "2007-10-09T18:20:50Z",
+                  "dnssec": false,
+                  "domain": "github.com",
+                  "domain_age_days": 6945,
+                  "expires": "2028-10-09T18:20:50Z",
+                  "nameservers": [
+                    "dns1.p08.nsone.net",
+                    "dns2.p08.nsone.net",
+                    "dns3.p08.nsone.net",
+                    "dns4.p08.nsone.net",
+                    "ns-1283.awsdns-32.org",
+                    "ns-1707.awsdns-21.co.uk",
+                    "ns-421.awsdns-52.com",
+                    "ns-520.awsdns-01.net"
+                  ],
+                  "registered": true,
+                  "registrar": "MarkMonitor Inc.",
+                  "status": [
+                    "client delete prohibited",
+                    "client transfer prohibited",
+                    "client update prohibited"
+                  ],
+                  "updated": "2026-09-07T09:22:52Z"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "Domain is not registered, or its TLD has no RDAP service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Domain not found in RDAP (unregistered or TLD without RDAP)"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          },
+          "503": {
+            "description": "The registry is rate limiting lookups right now; retry in a few seconds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Registry lookup is rate limited right now; retry in a few seconds"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scan": {
+      "get": {
+        "operationId": "scanWebsite",
+        "tags": [
+          "Website"
+        ],
+        "summary": "Detect website tech and security headers",
+        "description": "Fetches https://<domain> (following up to 5 redirects, 10 s timeout) and reports the redirect chain, server, generator, detected technologies (WordPress, Shopify, Next.js, React, Cloudflare, Google Analytics, Stripe and about 30 more) and which of six security headers are set, with a 0-100 score. Errors: `422` invalid or unresolvable domain, `400` private address, `502` fetch failed.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "required": true,
+            "description": "Domain name such as example.com. A full URL is accepted: the scheme, path and port are stripped and the value is lower-cased.",
+            "schema": {
+              "type": "string",
+              "maxLength": 253
+            },
+            "example": "wordpress.org"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scan result (headers trimmed in this example).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResult"
+                },
+                "example": {
+                  "domain": "wordpress.org",
+                  "final_url": "https://wordpress.org",
+                  "generator": "WordPress 7.2-alpha-64347",
+                  "headers": {
+                    "alt-svc": "clear",
+                    "connection": "keep-alive",
+                    "content-encoding": "gzip",
+                    "content-type": "text/html; charset=UTF-8",
+                    "date": "Wed, 14 Oct 2026 22:42:58 GMT",
+                    "link": "<https://wordpress.org/wp-json/>; rel=\"https://api.w.org/\", <https://wordpress.org/wp-json/wp/v2/pages/457>; rel=\"alternate\"; title=\"JSON\"; type=\"application/json\", <https://w.org/>; rel=shortlink",
+                    "server": "nginx",
+                    "strict-transport-security": "max-age=3600"
+                  },
+                  "powered_by": null,
+                  "redirect_chain": [
+                    {
+                      "status": 200,
+                      "url": "https://wordpress.org"
+                    }
+                  ],
+                  "security_headers": {
+                    "content-security-policy": false,
+                    "permissions-policy": false,
+                    "referrer-policy": false,
+                    "strict-transport-security": true,
+                    "x-content-type-options": false,
+                    "x-frame-options": true
+                  },
+                  "security_score": 33,
+                  "server": "nginx",
+                  "status_code": 200,
+                  "technologies": [
+                    "Google Tag Manager",
+                    "WordPress",
+                    "nginx"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (DomainKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (MCP) server for DomainKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"domainkit\": {\n      \"url\": \"https://domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"domainkit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "DnsResult": {
+        "type": "object",
+        "description": "DNS records and email-security summary.",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Normalised domain."
+          },
+          "records": {
+            "type": "object",
+            "description": "One key per requested record type. A type with no records is an empty array. MX entries are objects sorted by priority; SOA is an object when present; TXT values are joined strings; other types are strings.",
+            "properties": {
+              "A": {
+                "type": "array",
+                "description": "IPv4 addresses.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "AAAA": {
+                "type": "array",
+                "description": "IPv6 addresses.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "MX": {
+                "type": "array",
+                "description": "Mail servers, lowest priority first.",
+                "items": {
+                  "type": "object",
+                  "description": "MX record.",
+                  "properties": {
+                    "priority": {
+                      "type": "integer",
+                      "description": "MX preference."
+                    },
+                    "host": {
+                      "type": "string",
+                      "description": "Mail server hostname."
+                    }
+                  }
+                }
+              },
+              "NS": {
+                "type": "array",
+                "description": "Authoritative name servers.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "TXT": {
+                "type": "array",
+                "description": "TXT records (SPF, verification tokens and so on).",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "CNAME": {
+                "type": "array",
+                "description": "Canonical name target, if the name is an alias.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "SOA": {
+                "type": "object",
+                "description": "Start of authority (an empty array when absent).",
+                "properties": {
+                  "mname": {
+                    "type": "string",
+                    "description": "Primary name server."
+                  },
+                  "rname": {
+                    "type": "string",
+                    "description": "Responsible mailbox in DNS form."
+                  },
+                  "serial": {
+                    "type": "integer",
+                    "description": "Zone serial number."
+                  }
+                }
+              },
+              "CAA": {
+                "type": "array",
+                "description": "Certificate Authority Authorization records.",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "email_security": {
+            "type": "object",
+            "description": "Email authentication summary.",
+            "properties": {
+              "spf": {
+                "type": "string",
+                "description": "The v=spf1 TXT record, if TXT was requested and one exists.",
+                "nullable": true
+              },
+              "dmarc": {
+                "type": "string",
+                "description": "The DMARC policy from _dmarc.<domain> (always looked up).",
+                "nullable": true
+              },
+              "has_mx": {
+                "type": "boolean",
+                "description": "True if MX was requested and records exist."
+              }
+            }
+          }
+        }
+      },
+      "SslResult": {
+        "type": "object",
+        "description": "TLS certificate details for port 443. When the certificate fails verification only `domain`, `valid`, `error`, `protocol` and `cipher` are returned.",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain checked."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Certificate chain and hostname verified against the system trust store."
+          },
+          "error": {
+            "type": "string",
+            "description": "Verification failure reason (only when `valid` is false), for example 'certificate has expired'."
+          },
+          "issuer": {
+            "type": "object",
+            "description": "Issuer distinguished-name fields such as commonName, organizationName, countryName.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "subject": {
+            "type": "object",
+            "description": "Subject distinguished-name fields.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "san": {
+            "type": "array",
+            "description": "DNS names in the Subject Alternative Name extension (first 50).",
+            "items": {
+              "type": "string"
+            }
+          },
+          "valid_from": {
+            "type": "string",
+            "description": "Not-before timestamp, ISO 8601 UTC.",
+            "format": "date-time"
+          },
+          "valid_to": {
+            "type": "string",
+            "description": "Not-after (expiry) timestamp, ISO 8601 UTC.",
+            "format": "date-time"
+          },
+          "days_remaining": {
+            "type": "integer",
+            "description": "Whole days until expiry (negative if expired)."
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Negotiated TLS version, e.g. TLSv1.3.",
+            "nullable": true
+          },
+          "cipher": {
+            "type": "string",
+            "description": "Negotiated cipher suite.",
+            "nullable": true
+          },
+          "serial_number": {
+            "type": "string",
+            "description": "Certificate serial number in hex."
+          }
+        }
+      },
+      "WhoisResult": {
+        "type": "object",
+        "description": "Registration data from RDAP (falls back to port-43 WHOIS when the registry rate-limits RDAP).",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain looked up."
+          },
+          "registered": {
+            "type": "boolean",
+            "description": "Always true on a 200 response (unregistered domains return 404)."
+          },
+          "registrar": {
+            "type": "string",
+            "description": "Sponsoring registrar name.",
+            "nullable": true
+          },
+          "created": {
+            "type": "string",
+            "description": "Registration date as reported by the registry (ISO 8601 for RDAP).",
+            "nullable": true
+          },
+          "updated": {
+            "type": "string",
+            "description": "Last-changed date.",
+            "nullable": true
+          },
+          "expires": {
+            "type": "string",
+            "description": "Expiry date.",
+            "nullable": true
+          },
+          "domain_age_days": {
+            "type": "integer",
+            "description": "Days since registration.",
+            "nullable": true
+          },
+          "status": {
+            "type": "array",
+            "description": "EPP status values such as 'client transfer prohibited' (empty for WHOIS fallback).",
+            "items": {
+              "type": "string"
+            }
+          },
+          "nameservers": {
+            "type": "array",
+            "description": "Delegated name servers, lower-cased.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dnssec": {
+            "type": "boolean",
+            "description": "Whether the delegation is DNSSEC-signed (null if unknown).",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "description": "Present and set to `whois` only when the port-43 WHOIS fallback was used.",
+            "enum": [
+              "whois"
+            ]
+          }
+        }
+      },
+      "ScanResult": {
+        "type": "object",
+        "description": "Website technology and security-header scan of https://<domain>.",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "Domain scanned."
+          },
+          "final_url": {
+            "type": "string",
+            "description": "URL after up to 5 redirects.",
+            "format": "uri"
+          },
+          "status_code": {
+            "type": "integer",
+            "description": "HTTP status of the final response."
+          },
+          "redirect_chain": {
+            "type": "array",
+            "description": "Each hop requested, in order.",
+            "items": {
+              "type": "object",
+              "description": "Hop.",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "Requested URL."
+                },
+                "status": {
+                  "type": "integer",
+                  "description": "HTTP status."
+                }
+              }
+            }
+          },
+          "server": {
+            "type": "string",
+            "description": "Server response header.",
+            "nullable": true
+          },
+          "powered_by": {
+            "type": "string",
+            "description": "X-Powered-By header.",
+            "nullable": true
+          },
+          "generator": {
+            "type": "string",
+            "description": "<meta name=generator> content, e.g. 'WordPress 6.6'.",
+            "nullable": true
+          },
+          "technologies": {
+            "type": "array",
+            "description": "Detected technologies (CMS, frameworks, analytics, CDNs, servers), alphabetical. Detection is signature-based on HTML and headers.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "security_headers": {
+            "type": "object",
+            "description": "Presence of six recommended security headers.",
+            "properties": {
+              "strict-transport-security": {
+                "type": "boolean",
+                "description": "`strict-transport-security` header present."
+              },
+              "content-security-policy": {
+                "type": "boolean",
+                "description": "`content-security-policy` header present."
+              },
+              "x-frame-options": {
+                "type": "boolean",
+                "description": "`x-frame-options` header present."
+              },
+              "x-content-type-options": {
+                "type": "boolean",
+                "description": "`x-content-type-options` header present."
+              },
+              "referrer-policy": {
+                "type": "boolean",
+                "description": "`referrer-policy` header present."
+              },
+              "permissions-policy": {
+                "type": "boolean",
+                "description": "`permissions-policy` header present."
+              }
+            }
+          },
+          "security_score": {
+            "type": "integer",
+            "description": "Percentage of the six security headers present (0-100).",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "headers": {
+            "type": "object",
+            "description": "Response headers of the final page (lower-cased names, first 60).",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request: the URL is not http(s), or points to a private, loopback or reserved address.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Private or reserved addresses are not allowed"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Unprocessable: a required parameter is missing or a value is invalid. The `error` text says which.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "A required parameter is missing or invalid"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
+          }
+        }
+      },
+      "BadGateway": {
+        "description": "Bad gateway: the remote site or upstream service could not be reached, timed out, or returned an error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Fetch failed: ConnectTimeout"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "RapidAPIKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-RapidAPI-Key",
+        "description": "Your RapidAPI key. Also send header X-RapidAPI-Host: domainkit-dns-ssl-whois-website-tech-lookup.p.rapidapi.com"
+      }
+    }
+  },
+  "security": [
+    {
+      "RapidAPIKey": []
+    }
+  ],
+  "externalDocs": {
+    "description": "RapidAPI listing",
+    "url": "https://rapidapi.com/Olly-1VN9JTXKG/api/domainkit-dns-ssl-whois-website-tech-lookup"
+  }
+}
