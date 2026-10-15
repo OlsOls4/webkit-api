@@ -2,7 +2,7 @@
 Streamable HTTP transport, stateless JSON responses. Discovery (initialize, tools/list) is open;
 tools/call requires the RapidAPI gateway (each API's own RapidAPI listing; MCP lives at <listing host>/mcp)."""
 import base64, glob, json, os, re
-from flask import jsonify, Response, current_app
+from flask import jsonify, Response, current_app, g
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROTO = "2025-06-18"
@@ -84,12 +84,12 @@ def rpc(msg, request, kit=None):
         return ok({"protocolVersion": p.get("protocolVersion") if p.get("protocolVersion") in ("2025-06-18", "2025-03-26", "2024-11-05") else PROTO,
                    "capabilities": {"tools": {"listChanged": False}},
                    "serverInfo": {"name": kit or "all-tools", "title": KIT_NAMES.get(kit, "All tools"), "version": "1.1.0"},
-                   "instructions": f"{KIT_NAMES.get(kit, 'These tools')}. Tool calls are billed through this API's RapidAPI listing: subscribe there and send your X-RapidAPI-Key and X-RapidAPI-Host headers."})
+                   "instructions": f"{KIT_NAMES.get(kit, 'These tools')}." if kit and g.get("mcpize_kit") == kit else f"{KIT_NAMES.get(kit, 'These tools')}. Tool calls are billed through this API's RapidAPI listing: subscribe there and send your X-RapidAPI-Key and X-RapidAPI-Host headers."})
     if m and m.startswith("notifications/"): return None
     if m == "ping": return ok({})
     if m == "tools/list": return ok({"tools": [t["def"] for t in tools(kit).values()]})
     if m == "tools/call":
-        if not main.gate_ok(request):
+        if not (main.gate_ok(request) or (kit is not None and g.get("mcpize_kit") == kit)):
             return ok({"isError": True, "content": [{"type": "text", "text": "Tool calls require a RapidAPI subscription. Subscribe to this API on RapidAPI (free plan available) and connect via its RapidAPI host with your X-RapidAPI-Key header: https://rapidapi.com/user/Olly-1VN9JTXKG"}]})
         try: return ok(call(p.get("name"), p.get("arguments"), kit))
         except Exception as e: return ok({"isError": True, "content": [{"type": "text", "text": f"Tool error: {type(e).__name__}: {str(e)[:200]}"}]})
@@ -102,6 +102,7 @@ def handle(request, kit=None):
     if kit and kit not in KIT_NAMES: return jsonify(error="Unknown kit. Use one of: " + ", ".join(KIT_NAMES)), 404
     if request.method == "GET":
         if "text/event-stream" in (request.headers.get("Accept") or ""): return Response("SSE stream not supported; use POST", status=405)
+        if kit and g.get("mcpize_kit") == kit: return jsonify(name=kit, transport="streamable-http", tools=len(tools(kit)))
         return jsonify(name=kit or "all-tools", transport="streamable-http", tools=len(tools(kit)), docs="https://rapidapi.com/user/Olly-1VN9JTXKG")
     if request.method == "DELETE": return Response(status=204)
     if request.method != "POST": return Response(status=405)
