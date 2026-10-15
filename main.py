@@ -128,7 +128,7 @@ def handler(request):
         return mcpserver.handle(request, path[5:] or "webkit")
     if path.endswith("/mcp"):
         kit = {"": "webkit", "/domain": "domainkit", "/qrkit": "qrkit", "/text": "textkit", "/phone": "phonekit", "/valid": "validkit", "/geo": "geoip",
-               "/doc": "dockit", "/fraud": "fraudkit", "/llm": "llmkit", "/image": "imagekit", "/cal": "calkit", "/postcode": "ukpostcode"}.get(path[:-4])
+               "/doc": "dockit", "/fraud": "fraudkit", "/llm": "llmkit", "/image": "imagekit", "/cal": "calkit", "/postcode": "ukpostcode", "/fx": "currencykit", "/vat": "vatkit"}.get(path[:-4])
         if kit:
             import mcpserver
             return mcpserver.handle(request, kit)
@@ -145,7 +145,7 @@ def gate_ok(request):
 
 def route(request):
     path, a = request.path.rstrip("/") or "/", request.args
-    for prefix, mod in (("/domain", "domainkit"), ("/qrkit", "qrkit"), ("/text", "textkit"), ("/phone", "phonekit"), ("/valid", "validkit"), ("/geo", "geoip"), ("/doc", "dockit"), ("/fraud", "fraudkit"), ("/llm", "llmkit"), ("/image", "imagekit"), ("/cal", "calkit"), ("/postcode", "ukpostcode")):
+    for prefix, mod in (("/domain", "domainkit"), ("/qrkit", "qrkit"), ("/text", "textkit"), ("/phone", "phonekit"), ("/valid", "validkit"), ("/geo", "geoip"), ("/doc", "dockit"), ("/fraud", "fraudkit"), ("/llm", "llmkit"), ("/image", "imagekit"), ("/cal", "calkit"), ("/postcode", "ukpostcode"), ("/fx", "currencykit"), ("/vat", "vatkit")):
         if path == prefix or path.startswith(prefix + "/"):
             import importlib
             return importlib.import_module(mod + ".main").dispatch(request, path[len(prefix):] or "/")
