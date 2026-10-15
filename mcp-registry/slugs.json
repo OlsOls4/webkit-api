@@ -11,5 +11,7 @@
  "imagekit": "imagekit-resize-convert-to-webp-compress-crop",
  "ukpostcode": "uk-postcodekit-postcode-lookup-nearest-distance",
  "llmkit": "llmkit-token-counter-rag-chunker-json-repair",
- "calkit": "calkit-public-holidays-business-days-timezones"
+ "calkit": "calkit-public-holidays-business-days-timezones",
+ "currencykit": "currencykit-ecb-exchange-rates-currency-converter",
+ "vatkit": "vatkit-eu-vat-number-check-vies-vat-rates"
 }
