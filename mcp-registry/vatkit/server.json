@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.OlsOls4/vatkit",
+  "title": "VATKit",
+  "description": "Live EU VAT number checks via VIES with company name/address, VAT formats and EU VAT rates",
+  "repository": {
+    "url": "https://github.com/OlsOls4/webkit-api",
+    "source": "github"
+  },
+  "version": "1.1.0",
+  "websiteUrl": "https://rapidapi.com/Olly-1VN9JTXKG/api/vatkit-eu-vat-number-check-vies-vat-rates",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com/mcp",
+      "headers": [
+        {
+          "name": "X-RapidAPI-Key",
+          "description": "Your RapidAPI key (subscribe to VATKit on RapidAPI; free plan available)",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "X-RapidAPI-Host",
+          "description": "RapidAPI host for this API",
+          "isRequired": true,
+          "default": "vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com",
+          "choices": [
+            "vatkit-eu-vat-number-check-vies-vat-rates.p.rapidapi.com"
+          ]
+        }
+      ]
+    }
+  ]
+}
