@@ -1,0 +1,2145 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ImageKit - Image Resize, Convert to WebP, Compress, Crop & EXIF",
+    "version": "1.1.0",
+    "description": "# ImageKit: Image Resize, Convert to WebP, Compress, Crop and EXIF\n\nA simple image-processing API: resize, convert (WebP, JPEG, PNG, GIF, BMP, TIFF, ICO), compress, thumbnail, crop, rotate, grayscale, read EXIF and strip metadata. Point it at an image URL and get the processed image back as bytes or base64.\n\n**Who it's for:** web and app developers, e-commerce and CMS teams, no-code builders and marketers who need image processing without running servers.\n\n## Use cases\n- Convert product photos to WebP and cut page weight.\n- Generate square avatars and gallery thumbnails on the fly.\n- Strip GPS location from user-uploaded photos before publishing.\n- Compress images before attaching them to emails or storing them.\n- Read camera and date EXIF data for photo-management apps.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com/compress?url=https%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2F4%2F47%2FPNG_transparency_demonstration_1.png&output=base64' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Source images are read from a public URL (max 15 MB, 40 megapixels, 15 s timeout, redirects not followed).\n- Transform endpoints return the image bytes by default; add `output=base64` for JSON with a data URI.\n- Animated images are processed as their first frame.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `400` disallowed URL (not http/https, or a private address), `413` input too large, `422` missing or invalid parameter, `502` upstream site or service failed. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Image processing with Pillow (MIT-CMU licence). Images are processed in memory and not stored.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    },
+    "x-rapidapi-host": "imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com"
+  },
+  "servers": [
+    {
+      "url": "https://imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com",
+      "description": "RapidAPI gateway (subscribe on RapidAPI; a free plan is available)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Inspect",
+      "description": "Image metadata and EXIF."
+    },
+    {
+      "name": "Transform",
+      "description": "Resize, convert, thumbnail, crop, rotate and grayscale."
+    },
+    {
+      "name": "Optimize",
+      "description": "Web compression."
+    },
+    {
+      "name": "Privacy",
+      "description": "Metadata removal."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
+  "paths": {
+    "/info": {
+      "get": {
+        "operationId": "getImageInfo",
+        "tags": [
+          "Inspect"
+        ],
+        "summary": "Get image dimensions, format and EXIF",
+        "description": "Returns format, colour mode, width, height, file size, megapixels, aspect ratio, transparency, animation and frame count, and readable EXIF tags (camera, date, orientation, GPS). The image is not modified.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL of the source image (JPEG, PNG, WebP, GIF, BMP, TIFF or ICO; max 15 MB and 40 megapixels). Redirects are not followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image metadata (this PNG has no EXIF).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageInfo"
+                },
+                "example": {
+                  "animated": false,
+                  "aspect_ratio": 1.3333,
+                  "bytes": 224566,
+                  "exif": {},
+                  "format": "png",
+                  "frames": 1,
+                  "has_alpha": true,
+                  "height": 600,
+                  "megapixels": 0.48,
+                  "mode": "RGBA",
+                  "width": 800
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Image larger than 15 MB or 40 megapixels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Image max 15 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing or invalid parameter, or the file is not a supported image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not read image (supported: JPEG, PNG, WebP, GIF, BMP, TIFF, ICO)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The image URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resize": {
+      "get": {
+        "operationId": "resizeImage",
+        "tags": [
+          "Transform"
+        ],
+        "summary": "Resize an image",
+        "description": "Resizes to a width and/or height. Give one side to keep the aspect ratio. `contain` fits inside the box and never enlarges; `cover` fills the box and centre-crops; `fill` stretches to exact size. EXIF orientation is applied first, so phone photos come out the right way up. JPEG output flattens transparency onto white.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL of the source image (JPEG, PNG, WebP, GIF, BMP, TIFF or ICO; max 15 MB and 40 megapixels). Redirects are not followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+          },
+          {
+            "name": "width",
+            "in": "query",
+            "required": false,
+            "description": "Target width in px (0-8000). Give width, height or both.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8000
+            },
+            "example": 400
+          },
+          {
+            "name": "height",
+            "in": "query",
+            "required": false,
+            "description": "Target height in px (0-8000).",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8000
+            },
+            "example": 300
+          },
+          {
+            "name": "fit",
+            "in": "query",
+            "required": false,
+            "description": "Resize mode when both sides are given.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "contain",
+                "cover",
+                "fill"
+              ],
+              "default": "contain"
+            },
+            "example": "contain"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Output format. Defaults to the source format.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "jpeg",
+                "jpg",
+                "png",
+                "webp",
+                "gif",
+                "bmp",
+                "tiff",
+                "ico"
+              ]
+            },
+            "example": "webp"
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "description": "Lossy quality for JPEG and WebP (clamped to 1-100). Ignored for lossless formats.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 82
+            },
+            "example": 82
+          },
+          {
+            "name": "output",
+            "in": "query",
+            "required": false,
+            "description": "`binary` returns the image bytes; `base64` returns JSON with a data URI and dimensions.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "binary",
+                "base64"
+              ],
+              "default": "binary"
+            },
+            "example": "binary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The resized image. Binary responses include `X-Image-Width`, `X-Image-Height` and `X-Image-Bytes` headers; with `output=base64` the result is JSON.",
+            "headers": {
+              "X-Image-Width": {
+                "description": "Output width in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Height": {
+                "description": "Output height in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Bytes": {
+                "description": "Output size in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/bmp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/x-icon": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageResult"
+                },
+                "example": {
+                  "bytes": 29194,
+                  "data_uri": "data:image/webp;base64,UklGRgJyAABXRUJQVlA4WAoAAAAQAAAAjwEAKwEAQUxQSPFJA...",
+                  "format": "webp",
+                  "height": 300,
+                  "mime": "image/webp",
+                  "width": 400
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Image larger than 15 MB or 40 megapixels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Image max 15 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing or invalid parameter, or the file is not a supported image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not read image (supported: JPEG, PNG, WebP, GIF, BMP, TIFF, ICO)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The image URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/convert": {
+      "get": {
+        "operationId": "convertImage",
+        "tags": [
+          "Transform"
+        ],
+        "summary": "Convert an image to another format",
+        "description": "Converts between JPEG, PNG, WebP, GIF, BMP, TIFF and ICO. Converting PNG/JPEG to WebP typically cuts file size by 25-35%. EXIF orientation is applied first, so phone photos come out the right way up. JPEG output flattens transparency onto white.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL of the source image (JPEG, PNG, WebP, GIF, BMP, TIFF or ICO; max 15 MB and 40 megapixels). Redirects are not followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": true,
+            "description": "Target format (required).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "jpeg",
+                "jpg",
+                "png",
+                "webp",
+                "gif",
+                "bmp",
+                "tiff",
+                "ico"
+              ]
+            },
+            "example": "webp"
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "description": "Lossy quality for JPEG and WebP (clamped to 1-100). Ignored for lossless formats.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 82
+            },
+            "example": 82
+          },
+          {
+            "name": "output",
+            "in": "query",
+            "required": false,
+            "description": "`binary` returns the image bytes; `base64` returns JSON with a data URI and dimensions.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "binary",
+                "base64"
+              ],
+              "default": "binary"
+            },
+            "example": "binary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The converted image. Binary responses include `X-Image-Width`, `X-Image-Height` and `X-Image-Bytes` headers; with `output=base64` the result is JSON.",
+            "headers": {
+              "X-Image-Width": {
+                "description": "Output width in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Height": {
+                "description": "Output height in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Bytes": {
+                "description": "Output size in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/bmp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/x-icon": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageResult"
+                },
+                "example": {
+                  "bytes": 25561,
+                  "data_uri": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGB...",
+                  "format": "jpeg",
+                  "height": 600,
+                  "mime": "image/jpeg",
+                  "width": 800
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Image larger than 15 MB or 40 megapixels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Image max 15 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing or invalid parameter, or the file is not a supported image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not read image (supported: JPEG, PNG, WebP, GIF, BMP, TIFF, ICO)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The image URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compress": {
+      "get": {
+        "operationId": "compressImage",
+        "tags": [
+          "Optimize"
+        ],
+        "summary": "Compress an image for the web",
+        "description": "Re-encodes the image with optimised settings and optional downscaling to shrink file size for websites and email. Defaults to WebP; set `modern=false` for JPEG (or PNG when the image has transparency). The base64 response includes `original_bytes` so you can show the savings. EXIF orientation is applied first, so phone photos come out the right way up. JPEG output flattens transparency onto white.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL of the source image (JPEG, PNG, WebP, GIF, BMP, TIFF or ICO; max 15 MB and 40 megapixels). Redirects are not followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "description": "Lossy quality for JPEG and WebP (clamped to 1-100). Ignored for lossless formats.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 70
+            },
+            "example": 70
+          },
+          {
+            "name": "max_width",
+            "in": "query",
+            "required": false,
+            "description": "Downscale images wider than this (px, 0-8000; 0 = keep size). Height follows the aspect ratio.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8000,
+              "default": 0
+            },
+            "example": 1600
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Output format. Overrides `modern`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "jpeg",
+                "jpg",
+                "png",
+                "webp",
+                "gif",
+                "bmp",
+                "tiff",
+                "ico"
+              ]
+            },
+            "example": "webp"
+          },
+          {
+            "name": "modern",
+            "in": "query",
+            "required": false,
+            "description": "When no `format` is given: `true` outputs WebP; `false` outputs JPEG, or PNG for images with transparency.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "true"
+            },
+            "example": "true"
+          },
+          {
+            "name": "output",
+            "in": "query",
+            "required": false,
+            "description": "`binary` returns the image bytes; `base64` returns JSON with a data URI and dimensions.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "binary",
+                "base64"
+              ],
+              "default": "binary"
+            },
+            "example": "binary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The compressed image. Binary responses include `X-Image-Width`, `X-Image-Height` and `X-Image-Bytes` headers; with `output=base64` the result is JSON.",
+            "headers": {
+              "X-Image-Width": {
+                "description": "Output width in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Height": {
+                "description": "Output height in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Bytes": {
+                "description": "Output size in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/bmp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/x-icon": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageResult"
+                },
+                "example": {
+                  "bytes": 26734,
+                  "data_uri": "data:image/webp;base64,UklGRmZoAABXRUJQVlA4WAoAAAAQAAAAjwEAKwEAQUxQSPFJA...",
+                  "format": "webp",
+                  "height": 300,
+                  "mime": "image/webp",
+                  "original_bytes": 224566,
+                  "width": 400
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Image larger than 15 MB or 40 megapixels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Image max 15 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing or invalid parameter, or the file is not a supported image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not read image (supported: JPEG, PNG, WebP, GIF, BMP, TIFF, ICO)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The image URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thumbnail": {
+      "get": {
+        "operationId": "createThumbnail",
+        "tags": [
+          "Transform"
+        ],
+        "summary": "Create a thumbnail",
+        "description": "Makes a thumbnail of `size` px. By default it is square and centre-cropped; with `square=false` it fits within size x size and keeps the aspect ratio. Output defaults to WebP. EXIF orientation is applied first, so phone photos come out the right way up. JPEG output flattens transparency onto white.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL of the source image (JPEG, PNG, WebP, GIF, BMP, TIFF or ICO; max 15 MB and 40 megapixels). Redirects are not followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "Edge length in px (clamped to 16-2000).",
+            "schema": {
+              "type": "integer",
+              "minimum": 16,
+              "maximum": 2000,
+              "default": 256
+            },
+            "example": 200
+          },
+          {
+            "name": "square",
+            "in": "query",
+            "required": false,
+            "description": "`true` centre-crops to a square; `false` keeps the aspect ratio.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "true"
+            },
+            "example": "true"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Output format.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "jpeg",
+                "jpg",
+                "png",
+                "webp",
+                "gif",
+                "bmp",
+                "tiff",
+                "ico"
+              ],
+              "default": "webp"
+            },
+            "example": "webp"
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "description": "Lossy quality for JPEG and WebP (clamped to 1-100). Ignored for lossless formats.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 82
+            },
+            "example": 82
+          },
+          {
+            "name": "output",
+            "in": "query",
+            "required": false,
+            "description": "`binary` returns the image bytes; `base64` returns JSON with a data URI and dimensions.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "binary",
+                "base64"
+              ],
+              "default": "binary"
+            },
+            "example": "binary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The thumbnail. Binary responses include `X-Image-Width`, `X-Image-Height` and `X-Image-Bytes` headers; with `output=base64` the result is JSON.",
+            "headers": {
+              "X-Image-Width": {
+                "description": "Output width in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Height": {
+                "description": "Output height in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Bytes": {
+                "description": "Output size in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/bmp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/x-icon": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageResult"
+                },
+                "example": {
+                  "bytes": 17424,
+                  "data_uri": "data:image/webp;base64,UklGRghEAABXRUJQVlA4WAoAAAAQAAAAxwAAxwAAQUxQSCEqA...",
+                  "format": "webp",
+                  "height": 200,
+                  "mime": "image/webp",
+                  "width": 200
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Image larger than 15 MB or 40 megapixels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Image max 15 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing or invalid parameter, or the file is not a supported image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not read image (supported: JPEG, PNG, WebP, GIF, BMP, TIFF, ICO)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The image URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/crop": {
+      "get": {
+        "operationId": "cropImage",
+        "tags": [
+          "Transform"
+        ],
+        "summary": "Crop an image to a rectangle",
+        "description": "Crops the rectangle starting at (`x`, `y`) with the given width and height, in pixels from the top-left. Returns 422 if the box extends beyond the image. EXIF orientation is applied first, so phone photos come out the right way up. JPEG output flattens transparency onto white.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL of the source image (JPEG, PNG, WebP, GIF, BMP, TIFF or ICO; max 15 MB and 40 megapixels). Redirects are not followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+          },
+          {
+            "name": "x",
+            "in": "query",
+            "required": false,
+            "description": "Left edge in px.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "example": 0
+          },
+          {
+            "name": "y",
+            "in": "query",
+            "required": false,
+            "description": "Top edge in px.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "example": 0
+          },
+          {
+            "name": "width",
+            "in": "query",
+            "required": true,
+            "description": "Crop width in px.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 200
+          },
+          {
+            "name": "height",
+            "in": "query",
+            "required": true,
+            "description": "Crop height in px.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 200
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Output format. Defaults to the source format.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "jpeg",
+                "jpg",
+                "png",
+                "webp",
+                "gif",
+                "bmp",
+                "tiff",
+                "ico"
+              ]
+            },
+            "example": "webp"
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "description": "Lossy quality for JPEG and WebP (clamped to 1-100). Ignored for lossless formats.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 82
+            },
+            "example": 82
+          },
+          {
+            "name": "output",
+            "in": "query",
+            "required": false,
+            "description": "`binary` returns the image bytes; `base64` returns JSON with a data URI and dimensions.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "binary",
+                "base64"
+              ],
+              "default": "binary"
+            },
+            "example": "binary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The cropped image. Binary responses include `X-Image-Width`, `X-Image-Height` and `X-Image-Bytes` headers; with `output=base64` the result is JSON.",
+            "headers": {
+              "X-Image-Width": {
+                "description": "Output width in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Height": {
+                "description": "Output height in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Bytes": {
+                "description": "Output size in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/bmp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/x-icon": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageResult"
+                },
+                "example": {
+                  "bytes": 19042,
+                  "data_uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAABKKU...",
+                  "format": "png",
+                  "height": 200,
+                  "mime": "image/png",
+                  "width": 200
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Image larger than 15 MB or 40 megapixels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Image max 15 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing or invalid parameter, or the file is not a supported image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not read image (supported: JPEG, PNG, WebP, GIF, BMP, TIFF, ICO)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The image URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rotate": {
+      "get": {
+        "operationId": "rotateImage",
+        "tags": [
+          "Transform"
+        ],
+        "summary": "Rotate or flip an image",
+        "description": "Rotates clockwise by any angle (the canvas expands to fit) and optionally mirrors horizontally or vertically. EXIF orientation is applied first, so phone photos come out the right way up. JPEG output flattens transparency onto white.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL of the source image (JPEG, PNG, WebP, GIF, BMP, TIFF or ICO; max 15 MB and 40 megapixels). Redirects are not followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+          },
+          {
+            "name": "degrees",
+            "in": "query",
+            "required": false,
+            "description": "Clockwise rotation in degrees (-360 to 360; negative is anticlockwise).",
+            "schema": {
+              "type": "integer",
+              "minimum": -360,
+              "maximum": 360,
+              "default": 90
+            },
+            "example": 90
+          },
+          {
+            "name": "flip",
+            "in": "query",
+            "required": false,
+            "description": "Mirror after rotating.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "horizontal",
+                "vertical"
+              ]
+            },
+            "example": "horizontal"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Output format. Defaults to the source format.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "jpeg",
+                "jpg",
+                "png",
+                "webp",
+                "gif",
+                "bmp",
+                "tiff",
+                "ico"
+              ]
+            },
+            "example": "webp"
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "description": "Lossy quality for JPEG and WebP (clamped to 1-100). Ignored for lossless formats.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 82
+            },
+            "example": 82
+          },
+          {
+            "name": "output",
+            "in": "query",
+            "required": false,
+            "description": "`binary` returns the image bytes; `base64` returns JSON with a data URI and dimensions.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "binary",
+                "base64"
+              ],
+              "default": "binary"
+            },
+            "example": "binary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The rotated image. Binary responses include `X-Image-Width`, `X-Image-Height` and `X-Image-Bytes` headers; with `output=base64` the result is JSON.",
+            "headers": {
+              "X-Image-Width": {
+                "description": "Output width in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Height": {
+                "description": "Output height in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Bytes": {
+                "description": "Output size in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/bmp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/x-icon": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageResult"
+                },
+                "example": {
+                  "bytes": 252215,
+                  "data_uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAMgCAYAAAD/YBzEAAEAAE...",
+                  "format": "png",
+                  "height": 800,
+                  "mime": "image/png",
+                  "width": 600
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Image larger than 15 MB or 40 megapixels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Image max 15 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing or invalid parameter, or the file is not a supported image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not read image (supported: JPEG, PNG, WebP, GIF, BMP, TIFF, ICO)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The image URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/grayscale": {
+      "get": {
+        "operationId": "grayscaleImage",
+        "tags": [
+          "Transform"
+        ],
+        "summary": "Convert an image to grayscale",
+        "description": "Converts the image to 8-bit grayscale. EXIF orientation is applied first, so phone photos come out the right way up. JPEG output flattens transparency onto white.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL of the source image (JPEG, PNG, WebP, GIF, BMP, TIFF or ICO; max 15 MB and 40 megapixels). Redirects are not followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Output format. Defaults to the source format.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "jpeg",
+                "jpg",
+                "png",
+                "webp",
+                "gif",
+                "bmp",
+                "tiff",
+                "ico"
+              ]
+            },
+            "example": "webp"
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "description": "Lossy quality for JPEG and WebP (clamped to 1-100). Ignored for lossless formats.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 82
+            },
+            "example": 82
+          },
+          {
+            "name": "output",
+            "in": "query",
+            "required": false,
+            "description": "`binary` returns the image bytes; `base64` returns JSON with a data URI and dimensions.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "binary",
+                "base64"
+              ],
+              "default": "binary"
+            },
+            "example": "binary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The grayscale image. Binary responses include `X-Image-Width`, `X-Image-Height` and `X-Image-Bytes` headers; with `output=base64` the result is JSON.",
+            "headers": {
+              "X-Image-Width": {
+                "description": "Output width in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Height": {
+                "description": "Output height in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Bytes": {
+                "description": "Output size in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/bmp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/x-icon": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageResult"
+                },
+                "example": {
+                  "bytes": 68684,
+                  "data_uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAJYCAAAAAC/Hd2sAAEAAE...",
+                  "format": "png",
+                  "height": 600,
+                  "mime": "image/png",
+                  "width": 800
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Image larger than 15 MB or 40 megapixels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Image max 15 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing or invalid parameter, or the file is not a supported image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not read image (supported: JPEG, PNG, WebP, GIF, BMP, TIFF, ICO)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The image URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/strip-exif": {
+      "get": {
+        "operationId": "stripExif",
+        "tags": [
+          "Privacy"
+        ],
+        "summary": "Strip EXIF and GPS metadata",
+        "description": "Re-encodes the image without EXIF, GPS, camera and other embedded metadata (transparency is kept), so photos can be shared without revealing location or device. Orientation is baked into the pixels first so the image still displays correctly.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL of the source image (JPEG, PNG, WebP, GIF, BMP, TIFF or ICO; max 15 MB and 40 megapixels). Redirects are not followed; private addresses are refused.",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "example": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "description": "Output format. Defaults to the source format.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "jpeg",
+                "jpg",
+                "png",
+                "webp",
+                "gif",
+                "bmp",
+                "tiff",
+                "ico"
+              ]
+            },
+            "example": "webp"
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "required": false,
+            "description": "Lossy quality for JPEG and WebP (clamped to 1-100). Ignored for lossless formats.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 82
+            },
+            "example": 82
+          },
+          {
+            "name": "output",
+            "in": "query",
+            "required": false,
+            "description": "`binary` returns the image bytes; `base64` returns JSON with a data URI and dimensions.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "binary",
+                "base64"
+              ],
+              "default": "binary"
+            },
+            "example": "binary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image without metadata. Binary responses include `X-Image-Width`, `X-Image-Height` and `X-Image-Bytes` headers; with `output=base64` the result is JSON.",
+            "headers": {
+              "X-Image-Width": {
+                "description": "Output width in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Height": {
+                "description": "Output height in pixels.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Image-Bytes": {
+                "description": "Output size in bytes.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/bmp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/x-icon": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageResult"
+                },
+                "example": {
+                  "bytes": 239528,
+                  "data_uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAJYCAYAAACadoJwAAEAAE...",
+                  "format": "png",
+                  "height": 600,
+                  "mime": "image/png",
+                  "width": 800
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "description": "Image larger than 15 MB or 40 megapixels.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Image max 15 MB"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing or invalid parameter, or the file is not a supported image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Could not read image (supported: JPEG, PNG, WebP, GIF, BMP, TIFF, ICO)"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "502": {
+            "description": "The image URL could not be fetched or did not return 200.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Fetching url returned 404"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (ImageKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (MCP) server for ImageKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"imagekit\": {\n      \"url\": \"https://imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"imagekit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "ImageResult": {
+        "type": "object",
+        "description": "Returned when `output=base64`.",
+        "properties": {
+          "format": {
+            "type": "string",
+            "description": "Output format.",
+            "enum": [
+              "jpeg",
+              "jpg",
+              "png",
+              "webp",
+              "gif",
+              "bmp",
+              "tiff",
+              "ico"
+            ]
+          },
+          "mime": {
+            "type": "string",
+            "description": "MIME type."
+          },
+          "width": {
+            "type": "integer",
+            "description": "Output width in px."
+          },
+          "height": {
+            "type": "integer",
+            "description": "Output height in px."
+          },
+          "bytes": {
+            "type": "integer",
+            "description": "Output size in bytes."
+          },
+          "original_bytes": {
+            "type": "integer",
+            "description": "Source size in bytes (only from /compress)."
+          },
+          "data_uri": {
+            "type": "string",
+            "description": "`data:<mime>;base64,...`."
+          }
+        }
+      },
+      "ImageInfo": {
+        "type": "object",
+        "description": "Image metadata.",
+        "properties": {
+          "format": {
+            "type": "string",
+            "description": "Detected source format, lower-case.",
+            "nullable": true
+          },
+          "mode": {
+            "type": "string",
+            "description": "Pillow colour mode, e.g. RGB, RGBA, L, P, CMYK."
+          },
+          "width": {
+            "type": "integer",
+            "description": "Width in px."
+          },
+          "height": {
+            "type": "integer",
+            "description": "Height in px."
+          },
+          "bytes": {
+            "type": "integer",
+            "description": "File size in bytes."
+          },
+          "megapixels": {
+            "type": "number",
+            "description": "Width x height / 1,000,000."
+          },
+          "aspect_ratio": {
+            "type": "number",
+            "description": "Width / height.",
+            "nullable": true
+          },
+          "has_alpha": {
+            "type": "boolean",
+            "description": "Image has transparency."
+          },
+          "animated": {
+            "type": "boolean",
+            "description": "Animated GIF/WebP/PNG."
+          },
+          "frames": {
+            "type": "integer",
+            "description": "Number of frames (1 for still images)."
+          },
+          "exif": {
+            "type": "object",
+            "description": "EXIF tags by name (e.g. Make, Model, DateTime, Orientation, GPSInfo). Binary values are omitted, strings cut to 200 chars. Empty when none.",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request: the URL is not http(s), or points to a private, loopback or reserved address.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Private or reserved addresses are not allowed"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "RapidAPIKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-RapidAPI-Key",
+        "description": "Your RapidAPI key. Also send header X-RapidAPI-Host: imagekit-resize-convert-to-webp-compress-crop.p.rapidapi.com"
+      }
+    }
+  },
+  "security": [
+    {
+      "RapidAPIKey": []
+    }
+  ],
+  "externalDocs": {
+    "description": "RapidAPI listing",
+    "url": "https://rapidapi.com/Olly-1VN9JTXKG/api/imagekit-resize-convert-to-webp-compress-crop"
+  }
+}
