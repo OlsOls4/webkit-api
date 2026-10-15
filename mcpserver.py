@@ -7,7 +7,8 @@ from flask import jsonify, Response, current_app
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROTO = "2025-06-18"
 KIT_NAMES = {"webkit": "WebKit", "domainkit": "DomainKit", "qrkit": "QRKit", "textkit": "TextKit", "phonekit": "PhoneKit", "validkit": "ValidKit",
-             "geoip": "GeoIP", "dockit": "DocKit", "fraudkit": "FraudKit", "llmkit": "LLMKit", "imagekit": "ImageKit", "calkit": "CalKit", "ukpostcode": "UK PostcodeKit"}
+             "geoip": "GeoIP", "dockit": "DocKit", "fraudkit": "FraudKit", "llmkit": "LLMKit", "imagekit": "ImageKit", "calkit": "CalKit", "ukpostcode": "UK PostcodeKit",
+             "currencykit": "CurrencyKit", "vatkit": "VATKit"}
 _TOOLS = None
 
 def tools(kit=None):
