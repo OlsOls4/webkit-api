@@ -3,7 +3,7 @@ import ipaddress, os, re, socket
 from urllib.parse import urljoin, urlparse
 import dns.resolver, httpx, functions_framework
 from bs4 import BeautifulSoup
-from flask import jsonify
+from flask import jsonify, g
 
 import hashlib
 PROXY_SECRET = os.getenv("RAPIDAPI_PROXY_SECRET", "")
@@ -16,6 +16,27 @@ def _load_hashes():
     if PROXY_SECRET: h.add(hashlib.sha256(PROXY_SECRET.encode()).hexdigest())
     return h
 ALLOWED_HASHES = _load_hashes()
+MCP_PREFIX = {"": "webkit", "/domain": "domainkit", "/qrkit": "qrkit", "/text": "textkit", "/phone": "phonekit", "/valid": "validkit", "/geo": "geoip",
+              "/doc": "dockit", "/fraud": "fraudkit", "/llm": "llmkit", "/image": "imagekit", "/cal": "calkit", "/postcode": "ukpostcode", "/fx": "currencykit", "/vat": "vatkit"}
+def _load_mcpize():
+    """mcpize_hashes.txt: '<kit> <sha256 of that kit's MCPize upstream token>' per line. Tokens unlock MCP tools/call for that one kit only, never REST."""
+    m = {}
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mcpize_hashes.txt")) as f:
+            for l in f:
+                p = l.split()
+                if len(p) == 2 and p[0] in MCP_PREFIX.values() and re.fullmatch(r"[0-9a-f]{64}", p[1].lower()): m[p[1].lower()] = p[0]
+    except OSError: pass
+    return m
+MCPIZE_HASHES = _load_mcpize()
+def mcpize_kit(token):
+    return MCPIZE_HASHES.get(hashlib.sha256(token.encode()).hexdigest()) if token and 32 <= len(token) <= 128 else None
+def _mcp(request, kit, token=None):
+    import mcpserver
+    if token is None:
+        token = request.headers.get("X-Upstream-Key") or request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if kit and mcpize_kit(token) == kit: g.mcpize_kit = kit
+    return mcpserver.handle(request, kit)
 MAX_BYTES = 3_000_000
 UA = "Mozilla/5.0 (compatible; WebKitAPI/1.0; +https://rapidapi.com/Olly-1VN9JTXKG; ollymcbride4@gmail.com)"
 
@@ -123,15 +144,16 @@ def handler(request):
     if path == "/_proxyhash":
         v = request.headers.get("X-RapidAPI-Proxy-Secret", "")
         return jsonify(sha256=hashlib.sha256(v.encode()).hexdigest() if v else None)
+    mu = re.fullmatch(r"(.*)/mcp/u/([A-Za-z0-9_-]{32,128})", path)
+    if mu:  # MCPize secret-path route: /<prefix>/mcp/u/<per-kit token>
+        kit = MCP_PREFIX.get(mu.group(1))
+        if not kit or mcpize_kit(mu.group(2)) != kit: return jsonify(error="Not found"), 404
+        return _mcp(request, kit, mu.group(2))
     if path == "/mcp" or path.startswith("/mcp/"):
-        import mcpserver
-        return mcpserver.handle(request, path[5:] or "webkit")
+        return _mcp(request, path[5:] or "webkit")
     if path.endswith("/mcp"):
-        kit = {"": "webkit", "/domain": "domainkit", "/qrkit": "qrkit", "/text": "textkit", "/phone": "phonekit", "/valid": "validkit", "/geo": "geoip",
-               "/doc": "dockit", "/fraud": "fraudkit", "/llm": "llmkit", "/image": "imagekit", "/cal": "calkit", "/postcode": "ukpostcode", "/fx": "currencykit", "/vat": "vatkit"}.get(path[:-4])
-        if kit:
-            import mcpserver
-            return mcpserver.handle(request, kit)
+        kit = MCP_PREFIX.get(path[:-4])
+        if kit: return _mcp(request, kit)
     if path not in ("/", "/health") and ALLOWED_HASHES:
         v = request.headers.get("X-RapidAPI-Proxy-Secret", "")
         if not v or hashlib.sha256(v.encode()).hexdigest() not in ALLOWED_HASHES:
