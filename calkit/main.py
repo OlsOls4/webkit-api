@@ -80,7 +80,7 @@ def dispatch(request, path):
             t, f, to = a.get("time"), a.get("from"), a.get("to")
             zones = available_timezones()
             if f not in zones or to not in zones: raise ApiError(422, "from and to must be IANA timezones like Europe/London, America/New_York")
-            try: x = dt.datetime.fromisoformat(t) if t else dt.datetime.now()
+            try: x = dt.datetime.fromisoformat(t) if t else dt.datetime.now(ZoneInfo(f))
             except ValueError: raise ApiError(422, "time must be ISO 8601 like 2026-10-14T09:30")
             x = x.replace(tzinfo=ZoneInfo(f)) if x.tzinfo is None else x
             y = x.astimezone(ZoneInfo(to))
