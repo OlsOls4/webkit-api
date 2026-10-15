@@ -1,0 +1,862 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CurrencyKit - ECB Exchange Rates & Currency Converter",
+    "version": "1.1.0",
+    "description": "# CurrencyKit: ECB Exchange Rates and Currency Converter API\n\nOfficial European Central Bank euro reference rates for about 30 currencies, re-based to any of them: latest rates, conversion, any date back to 1999, and daily time series. Simple JSON, no scraping, consistent with what auditors and tax authorities expect.\n\n**Who it's for:** e-commerce checkouts and price displays, invoicing and accounting tools, finance dashboards, travel and expense apps, and EU VAT/OSS reporting that must use ECB rates.\n\n## Use cases\n- Show prices in a shopper's currency with an official daily rate.\n- Convert invoices at the ECB rate for the invoice date.\n- Revalue balances at month-end with a reproducible public rate.\n- Chart a currency pair over the past year.\n- Use ECB rates for EU VAT One Stop Shop (OSS) returns, which require them.\n\n## Quickstart\nSubscribe on RapidAPI (a free plan is available), copy your key, then:\n\n```bash\ncurl --request GET \\\n  --url 'https://currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com/latest?base=EUR&symbols=USD,GBP,JPY' \\\n  --header 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  --header 'X-RapidAPI-Host: currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com'\n```\n\n## Authentication\nEvery request goes through RapidAPI. Send `X-RapidAPI-Key` (your key) and `X-RapidAPI-Host` (`currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com`) on every call. Requests that bypass the gateway are rejected with `403`.\n\n## Good to know\n- Rates update once per business day around 16:00 CET; responses are cached for up to 30 minutes after a new fixing.\n- No intraday or crypto rates: these are daily reference rates, published by the ECB for information purposes and not for transaction use.\n- Dates are ISO 8601 (`YYYY-MM-DD`). Weekends and TARGET holidays resolve to the closest earlier fixing; `date` always tells you which one was used.\n- Cross rates (non-EUR base) are computed through the euro and rounded to 8 significant digits.\n\n## Rate limits and plans\nRequest quotas and per-second limits depend on the RapidAPI plan you subscribe to; see the Pricing tab. When a limit is reached the gateway returns `429 Too Many Requests`; retry with exponential backoff or move to a higher plan.\n\n## Errors\nAll errors are JSON. The API returns `{\"error\": \"<reason>\"}` with a meaningful HTTP status: `404` not found, `422` missing or invalid parameter, `503` temporarily unavailable, retry shortly. Gateway errors (`401`/`403`/`429`) come from RapidAPI as `{\"message\": \"<reason>\"}`.\n\n## Data sources and licences\n- Exchange rates: European Central Bank euro foreign exchange reference rates (https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html). Free reuse with source acknowledgement; the ECB publishes them for information purposes only.\n\n## MCP (AI agents)\nThis API is also available as a Model Context Protocol server at `POST /mcp` on the same RapidAPI host; see the MCP endpoint for setup.",
+    "contact": {
+      "name": "API support on RapidAPI",
+      "url": "https://rapidapi.com/user/Olly-1VN9JTXKG"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://webkit-api-1003933593053.us-central1.run.app/fx"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Rates",
+      "description": "Latest, historical and daily ECB reference rates."
+    },
+    {
+      "name": "Conversion",
+      "description": "Convert amounts between currencies."
+    },
+    {
+      "name": "Reference",
+      "description": "Supported currencies."
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoint that exposes this API's endpoints as tools for AI agents."
+    }
+  ],
+  "paths": {
+    "/latest": {
+      "get": {
+        "operationId": "getLatestRates",
+        "tags": [
+          "Rates"
+        ],
+        "summary": "Get the latest ECB reference rates",
+        "description": "Returns the most recent ECB euro foreign exchange reference rates (published around 16:00 CET on TARGET business days), re-based to any of the ~30 available currencies. Filter the response with `symbols`.",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "query",
+            "required": false,
+            "description": "Base currency the rates are quoted against (3-letter ISO 4217 code, case-insensitive. See /currencies.) Defaults to EUR.",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3,
+              "pattern": "^[A-Za-z]{3}$",
+              "default": "EUR"
+            },
+            "example": "EUR"
+          },
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": false,
+            "description": "Optional comma-separated list of target currencies (max 50), e.g. `USD,GBP,JPY`. Omit for all available currencies.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z]{3}(,[A-Za-z]{3})*$"
+            },
+            "example": "USD,GBP,JPY,CHF"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest rates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LatestRates"
+                },
+                "example": {
+                  "base": "EUR",
+                  "date": "2026-10-14",
+                  "note": "ECB reference rates are published for information purposes only, around 16:00 CET on TARGET business days. Not for transaction use.",
+                  "rates": {
+                    "CHF": 0.933,
+                    "GBP": 0.84385,
+                    "JPY": 177.39,
+                    "USD": 1.1195
+                  },
+                  "source": "European Central Bank euro foreign exchange reference rates (https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Unknown currency, bad date or invalid amount.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "from XYZ is not available for this date. See /currencies"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "ECB rates feed briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ECB reference rates are temporarily unavailable, retry shortly"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/convert": {
+      "get": {
+        "operationId": "convertCurrency",
+        "tags": [
+          "Conversion"
+        ],
+        "summary": "Convert an amount between currencies",
+        "description": "Converts an amount from one currency to another using the latest ECB reference rate, or the rate for a past `date` (the closest earlier ECB business day if that date had no fixing). Cross rates are computed through the euro.",
+        "parameters": [
+          {
+            "name": "amount",
+            "in": "query",
+            "required": false,
+            "description": "Amount to convert. Defaults to 1. Negative values are allowed (e.g. refunds).",
+            "schema": {
+              "type": "number",
+              "format": "double",
+              "default": 1
+            },
+            "example": 250
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "description": "Source currency (3-letter ISO 4217 code, case-insensitive. See /currencies.)",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            "example": "USD"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "description": "Target currency (3-letter ISO 4217 code, case-insensitive. See /currencies.)",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            "example": "GBP"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "description": "Optional historical date, YYYY-MM-DD (1999-01-04 onward). Omit for the latest rate.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2024-03-29"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversion"
+                },
+                "example": {
+                  "amount": 250.0,
+                  "date": "2024-03-28",
+                  "from": "USD",
+                  "inverse_rate": 1.2642966,
+                  "rate": 0.79095366,
+                  "requested_date": "2024-03-29",
+                  "result": 197.738415,
+                  "source": "European Central Bank euro foreign exchange reference rates (https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)",
+                  "to": "GBP"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Unknown currency, bad date or invalid amount.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "from XYZ is not available for this date. See /currencies"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "ECB rates feed briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ECB reference rates are temporarily unavailable, retry shortly"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/historical": {
+      "get": {
+        "operationId": "getHistoricalRates",
+        "tags": [
+          "Rates"
+        ],
+        "summary": "Get reference rates for a past date",
+        "description": "Returns the ECB reference rates for a date since 1999-01-04. Weekends and TARGET holidays resolve to the closest earlier business day: `requested_date` echoes your input and `date` is the fixing used. Includes legacy currencies (e.g. EEK, LTL, HRK) for dates when the ECB quoted them.",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "description": "Date, YYYY-MM-DD (1999-01-04 onward).",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2024-03-29"
+          },
+          {
+            "name": "base",
+            "in": "query",
+            "required": false,
+            "description": "Base currency the rates are quoted against (3-letter ISO 4217 code, case-insensitive. See /currencies.) Defaults to EUR.",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3,
+              "pattern": "^[A-Za-z]{3}$",
+              "default": "EUR"
+            },
+            "example": "USD"
+          },
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": false,
+            "description": "Optional comma-separated list of target currencies (max 50), e.g. `USD,GBP,JPY`. Omit for all available currencies.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z]{3}(,[A-Za-z]{3})*$"
+            },
+            "example": "EUR,GBP,JPY"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historical rates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalRates"
+                },
+                "example": {
+                  "base": "USD",
+                  "date": "2024-03-28",
+                  "note": "If the requested date was a weekend or TARGET holiday, the closest earlier ECB business day is used.",
+                  "rates": {
+                    "EUR": 0.92498381,
+                    "GBP": 0.79095366,
+                    "JPY": 151.1886
+                  },
+                  "requested_date": "2024-03-29",
+                  "source": "European Central Bank euro foreign exchange reference rates (https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "description": "No ECB fixing on or before that date.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "No ECB reference rate on or before that date"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown currency, bad date or invalid amount.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "from XYZ is not available for this date. See /currencies"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "ECB rates feed briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ECB reference rates are temporarily unavailable, retry shortly"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/timeseries": {
+      "get": {
+        "operationId": "getRateTimeseries",
+        "tags": [
+          "Rates"
+        ],
+        "summary": "Get daily rates between two dates",
+        "description": "Returns the daily ECB reference rates for every business day between `start` and `end` (inclusive, up to 366 days per call), re-based and filtered like /latest. Use it for charts, month-end revaluation and back-testing. Days without a fixing are simply absent.",
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "description": "First date, YYYY-MM-DD (1999-01-04 onward).",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2026-09-01"
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "description": "Last date, YYYY-MM-DD, on or after `start` and at most 366 days later.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "example": "2026-09-04"
+          },
+          {
+            "name": "base",
+            "in": "query",
+            "required": false,
+            "description": "Base currency the rates are quoted against (3-letter ISO 4217 code, case-insensitive. See /currencies.) Defaults to EUR.",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3,
+              "pattern": "^[A-Za-z]{3}$",
+              "default": "EUR"
+            },
+            "example": "EUR"
+          },
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": false,
+            "description": "Optional comma-separated list of target currencies (max 50), e.g. `USD,GBP,JPY`. Omit for all available currencies.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z]{3}(,[A-Za-z]{3})*$"
+            },
+            "example": "USD,GBP"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily rates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Timeseries"
+                },
+                "example": {
+                  "base": "EUR",
+                  "days": 4,
+                  "end": "2026-09-04",
+                  "rates": {
+                    "2026-09-01": {
+                      "GBP": 0.85655,
+                      "USD": 1.159
+                    },
+                    "2026-09-02": {
+                      "GBP": 0.8587,
+                      "USD": 1.1578
+                    },
+                    "2026-09-03": {
+                      "GBP": 0.86055,
+                      "USD": 1.1615
+                    },
+                    "2026-09-04": {
+                      "GBP": 0.85898,
+                      "USD": 1.1622
+                    }
+                  },
+                  "source": "European Central Bank euro foreign exchange reference rates (https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)",
+                  "start": "2026-09-01"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "description": "Unknown currency, bad date or invalid amount.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "from XYZ is not available for this date. See /currencies"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "ECB rates feed briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ECB reference rates are temporarily unavailable, retry shortly"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/currencies": {
+      "get": {
+        "operationId": "listCurrencies",
+        "tags": [
+          "Reference"
+        ],
+        "summary": "List supported currencies",
+        "description": "Lists the currencies in the latest ECB fixing with their English names, plus legacy currencies that appear only in older data (usable with /historical and /timeseries for those dates).",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Currencies (example trimmed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyList"
+                },
+                "example": {
+                  "count": 30,
+                  "currencies": [
+                    {
+                      "code": "AUD",
+                      "name": "Australian dollar"
+                    },
+                    {
+                      "code": "BRL",
+                      "name": "Brazilian real"
+                    },
+                    {
+                      "code": "CAD",
+                      "name": "Canadian dollar"
+                    },
+                    {
+                      "code": "CHF",
+                      "name": "Swiss franc"
+                    },
+                    {
+                      "code": "CNY",
+                      "name": "Chinese yuan renminbi"
+                    }
+                  ],
+                  "date": "2026-10-14",
+                  "historical_only": {
+                    "BGN": "Bulgarian lev",
+                    "CYP": "Cypriot pound",
+                    "EEK": "Estonian kroon",
+                    "HRK": "Croatian kuna"
+                  },
+                  "note": "historical_only lists currencies that appear only in older ECB data (e.g. pre-euro national currencies); /historical and /timeseries accept them for dates when they were quoted.",
+                  "source": "European Central Bank euro foreign exchange reference rates (https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "description": "ECB rates feed briefly unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "ECB reference rates are temporarily unavailable, retry shortly"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "operationId": "mcp",
+        "summary": "MCP server (CurrencyKit tools for AI agents)",
+        "tags": [
+          "MCP"
+        ],
+        "description": "Model Context Protocol (MCP) server for CurrencyKit. This is a **streamable-HTTP** MCP endpoint (JSON-RPC 2.0 over POST, stateless JSON responses) that exposes every endpoint of this API as an MCP tool, so AI agents such as Claude Desktop, Cursor, Windsurf or any MCP client can call it directly.\n\n- `initialize`, `tools/list` and `ping` work for discovery.\n- `tools/call` runs the underlying endpoint and is billed exactly like a normal request on your RapidAPI plan.\n- Tool inputs mirror the query parameters and body fields documented on each endpoint.\n\n**Endpoint:** `https://currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com/mcp` with headers `X-RapidAPI-Key: YOUR_RAPIDAPI_KEY` and `X-RapidAPI-Host: currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com`.\n\n**Cursor** (`~/.cursor/mcp.json`) or any client that supports remote servers with headers:\n\n```json\n{\n  \"mcpServers\": {\n    \"currencykit\": {\n      \"url\": \"https://currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com/mcp\",\n      \"headers\": {\n        \"X-RapidAPI-Key\": \"YOUR_RAPIDAPI_KEY\",\n        \"X-RapidAPI-Host\": \"currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com\"\n      }\n    }\n  }\n}\n```\n\n**Claude Desktop** (`claude_desktop_config.json`, via the `mcp-remote` bridge):\n\n```json\n{\n  \"mcpServers\": {\n    \"currencykit\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"mcp-remote\",\n        \"https://currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com/mcp\",\n        \"--header\",\n        \"X-RapidAPI-Key:${RAPIDAPI_KEY}\",\n        \"--header\",\n        \"X-RapidAPI-Host:currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com\"\n      ],\n      \"env\": {\n        \"RAPIDAPI_KEY\": \"YOUR_RAPIDAPI_KEY\"\n      }\n    }\n  }\n}\n```\n\n**Raw request:**\n\n```bash\ncurl -X POST 'https://currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com/mcp' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-RapidAPI-Key: YOUR_RAPIDAPI_KEY' \\\n  -H 'X-RapidAPI-Host: currencykit-ecb-exchange-rates-currency-converter.p.rapidapi.com' \\\n  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}'\n```",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/list"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "jsonrpc",
+                  "method"
+                ]
+              },
+              "example": {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Error body. Errors raised by the API itself carry an `error` string. Errors raised by the RapidAPI gateway (missing or invalid key, not subscribed, quota or rate limit exceeded) carry a `message` string instead.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable reason the request failed."
+          },
+          "message": {
+            "type": "string",
+            "description": "Gateway error message (RapidAPI 401/403/429 responses)."
+          }
+        },
+        "example": {
+          "error": "Explanation of what went wrong"
+        }
+      },
+      "LatestRates": {
+        "type": "object",
+        "description": "Latest rates.",
+        "properties": {
+          "base": {
+            "type": "string",
+            "description": "Base currency."
+          },
+          "date": {
+            "type": "string",
+            "description": "ECB fixing date, YYYY-MM-DD.",
+            "format": "date"
+          },
+          "rates": {
+            "type": "object",
+            "description": "Map of currency code to units of that currency per 1 unit of `base` (8 significant digits).",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "Data source attribution (ECB)."
+          },
+          "note": {
+            "type": "string",
+            "description": "Usage note on ECB reference rates."
+          }
+        }
+      },
+      "HistoricalRates": {
+        "type": "object",
+        "description": "Rates for a past date.",
+        "properties": {
+          "base": {
+            "type": "string",
+            "description": "Base currency."
+          },
+          "requested_date": {
+            "type": "string",
+            "description": "Date you asked for.",
+            "format": "date"
+          },
+          "date": {
+            "type": "string",
+            "description": "Fixing date actually used (same or closest earlier business day).",
+            "format": "date"
+          },
+          "rates": {
+            "type": "object",
+            "description": "Map of currency code to units of that currency per 1 unit of `base` (8 significant digits).",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "Data source attribution (ECB)."
+          },
+          "note": {
+            "type": "string",
+            "description": "How weekends and holidays are resolved."
+          }
+        }
+      },
+      "Conversion": {
+        "type": "object",
+        "description": "Currency conversion.",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Source currency."
+          },
+          "to": {
+            "type": "string",
+            "description": "Target currency."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount converted."
+          },
+          "rate": {
+            "type": "number",
+            "description": "Units of `to` per 1 `from` (8 significant digits)."
+          },
+          "inverse_rate": {
+            "type": "number",
+            "description": "Units of `from` per 1 `to`."
+          },
+          "result": {
+            "type": "number",
+            "description": "amount x rate, rounded to 6 decimals."
+          },
+          "date": {
+            "type": "string",
+            "description": "ECB fixing date used.",
+            "format": "date"
+          },
+          "requested_date": {
+            "type": "string",
+            "description": "Historical date requested, or null for latest.",
+            "nullable": true,
+            "format": "date"
+          },
+          "source": {
+            "type": "string",
+            "description": "Data source attribution (ECB)."
+          }
+        }
+      },
+      "Timeseries": {
+        "type": "object",
+        "description": "Daily rates.",
+        "properties": {
+          "base": {
+            "type": "string",
+            "description": "Base currency."
+          },
+          "start": {
+            "type": "string",
+            "description": "Start date.",
+            "format": "date"
+          },
+          "end": {
+            "type": "string",
+            "description": "End date.",
+            "format": "date"
+          },
+          "days": {
+            "type": "integer",
+            "description": "Number of fixing days returned."
+          },
+          "rates": {
+            "type": "object",
+            "description": "Map of fixing date (YYYY-MM-DD) to a map of currency code to rate.",
+            "additionalProperties": {
+              "type": "object",
+              "description": "Map of currency code to units of that currency per 1 unit of `base` (8 significant digits).",
+              "additionalProperties": {
+                "type": "number"
+              }
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "Data source attribution (ECB)."
+          }
+        }
+      },
+      "CurrencyList": {
+        "type": "object",
+        "description": "Supported currencies.",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Latest fixing date.",
+            "format": "date"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of current currencies (EUR included)."
+          },
+          "currencies": {
+            "type": "array",
+            "description": "Current currencies.",
+            "items": {
+              "type": "object",
+              "description": "Currency.",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "description": "ISO 4217 code."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "English name."
+                }
+              }
+            }
+          },
+          "historical_only": {
+            "type": "object",
+            "description": "Legacy currencies found only in older fixings: code to name.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "Explanation of historical_only."
+          },
+          "source": {
+            "type": "string",
+            "description": "Data source attribution (ECB)."
+          }
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "Forbidden: the request did not arrive through the RapidAPI gateway, or your RapidAPI key is not subscribed to this API.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You are not subscribed to this API."
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests: your RapidAPI plan's rate limit or monthly quota was exceeded. Back off and retry, or upgrade your plan.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "message": "You have exceeded the rate limit per second for your plan, BASIC, by the API provider"
+            }
+          }
+        }
+      }
+    }
+  }
+}
